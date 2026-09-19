@@ -1,10 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import BodhiLeaf from "@/components/BodhiLeaf";
 import { circuitSites } from "@/lib/data";
+import CelebrationMap from "@/components/CelebrationMap";
 
 export default function CircuitPage() {
   const reduce = useReducedMotion();
@@ -14,7 +16,7 @@ export default function CircuitPage() {
       {/* header */}
       <section className="relative py-24 md:py-32 overflow-hidden">
         <div className="absolute inset-0">
-          <img src="/images/sarnath.webp" alt="Dhamek Stupa at Sarnath at dusk" className="w-full h-full object-cover opacity-30" />
+          <Image src="/images/sarnath.webp" alt="Dhamek Stupa at Sarnath at dusk" fill className="object-cover opacity-30" priority />
           <div className="absolute inset-0 bg-gradient-to-b from-ink via-ink/60 to-ink" />
         </div>
         {!reduce && (
@@ -96,6 +98,24 @@ export default function CircuitPage() {
             );
           })}
         </div>
+      </section>
+
+      {/* celebration map */}
+      <section id="map" className="max-w-6xl mx-auto px-5 md:px-8 pb-16 scroll-mt-24">
+        <Reveal className="text-center mb-8">
+          <p className="text-gold tracking-[0.35em] uppercase text-xs font-semibold mb-3">The living geography</p>
+          <h2 className="font-display text-4xl md:text-5xl mb-4">
+            Where we walk, <span className="text-gradient-gold">what we celebrate</span>
+          </h2>
+          <p className="text-cream/65 max-w-2xl mx-auto">
+            The eight sacred sites of the Bodhi Circuit — and the living traditions of
+            Bihar, Uttar Pradesh and Jharkhand that inspire JUBAAN&apos;s festivals.
+            Switch layers, tap a marker, and explore.
+          </p>
+        </Reveal>
+        <Reveal>
+          <CelebrationMap />
+        </Reveal>
       </section>
 
       {/* closing */}

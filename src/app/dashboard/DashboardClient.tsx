@@ -26,7 +26,7 @@ export default function DashboardClient({ rsvps: initial, mine }: { rsvps: Rsvp[
     <div className="grid lg:grid-cols-2 gap-8">
       <Reveal className="rounded-3xl border border-cream/10 bg-coal/60 p-7">
         <h2 className="font-display text-2xl mb-1">Your RSVPs</h2>
-        <p className="text-muted text-sm mb-5">Gatherings you've marked yourself going to.</p>
+        <p className="text-muted text-sm mb-5">Gatherings you&rsquo;ve marked yourself going to.</p>
         {rsvps.length === 0 ? (
           <p className="text-muted text-sm">
             Nothing yet — <Link href="/events" className="text-gold hover:text-goldsoft">find a gathering</Link> to join.
@@ -69,7 +69,7 @@ export default function DashboardClient({ rsvps: initial, mine }: { rsvps: Rsvp[
         <p className="text-muted text-sm mb-5">Published by you to the community calendar.</p>
         {mine.length === 0 ? (
           <p className="text-muted text-sm">
-            You haven't published any events yet — <Link href="/calendar" className="text-gold hover:text-goldsoft">add one from the calendar</Link>.
+            You haven&rsquo;t published any events yet — <Link href="/calendar" className="text-gold hover:text-goldsoft">add one from the calendar</Link>.
           </p>
         ) : (
           <ul className="space-y-3">

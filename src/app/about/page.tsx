@@ -58,7 +58,7 @@ export default function AboutPage() {
         <Reveal>
           <h2 className="font-display text-3xl md:text-4xl mb-5">Our <span className="text-gradient-gold">vision</span></h2>
           <p className="text-cream/70 text-lg leading-relaxed mb-8">
-            To be a vibrant cultural platform that celebrates India's diversity,
+            To be a vibrant cultural platform that celebrates India&rsquo;s diversity,
             preserves regional heritage and folk traditions, and connects
             students across states through shared celebration.
           </p>

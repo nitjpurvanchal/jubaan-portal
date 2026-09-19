@@ -1,12 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import BodhiLeaf from "./BodhiLeaf";
 
 const links = [
   { href: "/", label: "Home" },
@@ -15,6 +15,22 @@ const links = [
   { href: "/events", label: "Events" },
   { href: "/about", label: "About" },
 ];
+
+function LogoMark({ size = 42 }: { size?: number }) {
+  return (
+    <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
+      <Image
+        src="/logo/jubaan-logo-512.png"
+        alt="JUBAAN embroidered logo"
+        width={size}
+        height={size}
+        priority
+        className="rounded-full object-cover ring-1 ring-gold/40 shadow-[0_0_18px_rgba(217,164,65,0.35)]"
+      />
+      <span className="pointer-events-none absolute -inset-[3px] rounded-full border border-gold/20" />
+    </span>
+  );
+}
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -52,19 +68,21 @@ export default function Navbar() {
   return (
     <header
       className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
-        scrolled
+        scrolled || open
           ? "bg-ink/85 backdrop-blur-xl border-b border-gold/15 shadow-[0_8px_40px_rgba(0,0,0,0.5)]"
-          : "bg-transparent border-b border-transparent"
+          : "bg-gradient-to-b from-ink/70 to-transparent border-b border-transparent"
       }`}
     >
       <nav className="max-w-7xl mx-auto px-5 md:px-8 h-[72px] flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
-          <BodhiLeaf className="w-8 h-10 text-gold transition-transform duration-500 group-hover:rotate-12" glow />
+        <Link href="/" className="flex items-center gap-3 group" aria-label="JUBAAN home">
+          <span className="transition-transform duration-500 group-hover:rotate-[8deg]">
+            <LogoMark />
+          </span>
           <div className="leading-tight">
-            <p className="font-display font-bold text-xl tracking-wide text-cream">
+            <p className="font-display font-bold text-xl tracking-[0.12em] text-cream">
               JUBAAN
             </p>
-            <p className="text-[10px] tracking-[0.25em] uppercase text-muted">
+            <p className="text-[10px] tracking-[0.28em] uppercase text-gold/80">
               Bodhi Circuit
             </p>
           </div>
@@ -83,7 +101,7 @@ export default function Navbar() {
               {pathname === l.href && (
                 <motion.span
                   layoutId="nav-underline"
-                  className="absolute left-4 right-4 -bottom-0.5 h-px bg-gold"
+                  className="absolute left-4 right-4 -bottom-0.5 h-[2px] rounded-full bg-gradient-to-r from-transparent via-gold to-transparent"
                 />
               )}
             </Link>
@@ -106,10 +124,7 @@ export default function Navbar() {
               </button>
             </>
           ) : (
-            <Link
-              href="/login"
-              className="ml-2 px-5 py-2.5 text-sm rounded-full bg-gold text-ink font-semibold hover:bg-goldsoft transition-all duration-300 shadow-[0_0_24px_rgba(217,164,65,0.35)]"
-            >
+            <Link href="/login" className="ml-2 btn-gold px-6 py-2.5 text-sm">
               Join / Sign in
             </Link>
           )}
@@ -118,11 +133,21 @@ export default function Navbar() {
         <button
           className="md:hidden p-2 text-cream"
           onClick={() => setOpen(!open)}
-          aria-label="Toggle menu"
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
         >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <motion.svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            animate={{ rotate: open ? 90 : 0 }}
+            transition={{ duration: 0.25 }}
+          >
             {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-          </svg>
+          </motion.svg>
         </button>
       </nav>
 
@@ -132,20 +157,28 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
             className="md:hidden bg-ink/95 backdrop-blur-xl border-b border-gold/15 overflow-hidden"
           >
             <div className="px-6 py-4 flex flex-col gap-1">
-              {[...links, ...(user ? [{ href: "/dashboard", label: "Dashboard" }] : [])].map((l) => (
-                <Link
+              {[...links, ...(user ? [{ href: "/dashboard", label: "Dashboard" }] : [])].map((l, i) => (
+                <motion.div
                   key={l.href}
-                  href={l.href}
-                  onClick={() => setOpen(false)}
-                  className={`py-3 text-base border-b border-cream/5 ${
-                    pathname === l.href ? "text-gold" : "text-cream/80"
-                  }`}
+                  initial={{ opacity: 0, x: -14 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.05 + i * 0.05 }}
                 >
-                  {l.label}
-                </Link>
+                  <Link
+                    href={l.href}
+                    onClick={() => setOpen(false)}
+                    className={`flex items-center justify-between py-3 text-base border-b border-cream/5 ${
+                      pathname === l.href ? "text-gold" : "text-cream/80"
+                    }`}
+                  >
+                    {l.label}
+                    <span className="text-gold/50">→</span>
+                  </Link>
+                </motion.div>
               ))}
               {user ? (
                 <button onClick={signOut} className="py-3 text-left text-base text-saffron">
@@ -155,7 +188,7 @@ export default function Navbar() {
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="mt-3 mb-2 px-5 py-3 text-center rounded-full bg-gold text-ink font-semibold"
+                  className="mt-3 mb-2 btn-gold px-5 py-3 text-center"
                 >
                   Join / Sign in
                 </Link>

@@ -19,6 +19,10 @@
 
   --animate-drift: drift 14s ease-in-out infinite;
   --animate-glow-pulse: glowPulse 5s ease-in-out infinite;
+  --animate-hero-zoom: heroZoom 36s ease-in-out infinite alternate;
+  --animate-spin-slower: spinSlower 70s linear infinite;
+  --animate-float-y: floatY 7s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.8s linear infinite;
 
   @keyframes drift {
     0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -27,6 +31,21 @@
   @keyframes glowPulse {
     0%, 100% { opacity: 0.55; }
     50% { opacity: 1; }
+  }
+  @keyframes heroZoom {
+    0% { transform: scale(1) translateY(0); }
+    100% { transform: scale(1.12) translateY(-1.5%); }
+  }
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+  @keyframes spinSlower {
+    to { transform: rotate(360deg); }
   }
 }
 
@@ -73,4 +92,121 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.text-shimmer-gold {
+  background: linear-gradient(110deg, #d9a441 20%, #fff3d6 40%, #d9a441 60%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.8s linear infinite;
+}
+
+/* hide scrollbars on horizontal carousels */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* shared button language */
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #eac46e 0%, #d9a441 55%, #c98f2e 100%);
+  color: var(--color-ink);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 36px rgba(217, 164, 65, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
+}
+.btn-gold:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow: 0 0 56px rgba(217, 164, 65, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.btn-gold:active {
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(247, 240, 221, 0.28);
+  color: var(--color-cream);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease, border-color 0.3s ease, color 0.3s ease, background 0.3s ease;
+}
+.btn-ghost:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+  background: rgba(217, 164, 65, 0.08);
+}
+
+/* glass card */
+.glass {
+  background: rgba(33, 26, 14, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(247, 240, 221, 0.1);
+}
+
+/* glowing form fields */
+.field-glow {
+  width: 100%;
+  border-radius: 1rem;
+  background: rgba(15, 12, 7, 0.7);
+  border: 1px solid rgba(247, 240, 221, 0.14);
+  padding: 0.9rem 1.25rem;
+  color: var(--color-cream);
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+.field-glow::placeholder {
+  color: rgba(168, 154, 120, 0.55);
+}
+.field-glow:focus {
+  border-color: rgba(217, 164, 65, 0.8);
+  box-shadow: 0 0 0 3px rgba(217, 164, 65, 0.18), 0 0 28px rgba(217, 164, 65, 0.22);
+  background: rgba(15, 12, 7, 0.9);
+}
+
+/* thin gold divider with centre motif */
+.rule-motif {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.rule-motif::before,
+.rule-motif::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, rgba(217, 164, 65, 0.45), transparent);
+}
+
+/* respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
