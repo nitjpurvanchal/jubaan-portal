@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "@/hooks/useSession";
-import { isAdminEmail } from "@/lib/admin";
 import LogoMark from "@/components/LogoMark";
 
 const links = [
@@ -75,14 +74,12 @@ export default function Navbar() {
     (user?.user_metadata?.full_name as string | undefined)?.trim()?.[0] ??
     user?.email?.[0]?.toUpperCase() ??
     "J";
-  const isAdmin = isAdminEmail(user?.email);
 
   const inDiscover = discover.some((d) => pathname === d.href);
   const mobileLinks = [
     ...links,
     ...discover,
     ...(user ? [{ href: "/dashboard", label: "Dashboard" }] : []),
-    ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
   ];
 
   return (
@@ -219,16 +216,6 @@ export default function Navbar() {
               >
                 Dashboard
               </Link>
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className={`px-3.5 py-2 text-sm tracking-wide transition-colors ${
-                    pathname === "/admin" ? "text-gold" : "text-cream/70 hover:text-cream"
-                  }`}
-                >
-                  Admin
-                </Link>
-              )}
               <span
                 className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gold to-saffron font-display text-sm font-bold text-ink shadow-[0_0_16px_rgba(217,164,65,0.4)]"
                 title={user.email ?? "Signed in"}

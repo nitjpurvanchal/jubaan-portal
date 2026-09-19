@@ -1,25 +1,14 @@
-// JUBAAN admin gating — who may open the on-site admin panel (/admin).
+// JUBAAN admin — shared client-safe bits.
 //
-// The default admin is the club's service address. Extra admins can be added
-// WITHOUT a code change via the JUBAAN_ADMIN_EMAILS env var (comma-separated,
-// e.g. "a@x.com, b@y.com").
-//
-// IMPORTANT: keep this list in sync with the array inside
-// public.is_jubaan_admin() in supabase/migrations/004_volunteer_tracks.sql —
-// the env var gates the /admin page, the SQL function gates the database
-// rows (RLS). Both must know an admin's email.
+// The admin panel (/admin) is hidden from the main site (no nav links) and
+// uses its own credential system: roll number + DOB password (DDMMYYYY).
+// Session logic lives in src/lib/adminAuth.ts (SERVER-ONLY); this file holds
+// only constants and types safe to import from client components.
 
-export const DEFAULT_ADMIN_EMAIL = "nitjpurvanchal@gmail.com";
+export const ADMIN_COOKIE = "jubaan_admin";
 
-export function getAdminEmails(): string[] {
-  const fromEnv = (process.env.JUBAAN_ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  return [...new Set([DEFAULT_ADMIN_EMAIL.toLowerCase(), ...fromEnv])];
-}
-
-export function isAdminEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  return getAdminEmails().includes(email.trim().toLowerCase());
-}
+export type AdminSummary = {
+  id: string;
+  roll_number: string;
+  full_name: string | null;
+};

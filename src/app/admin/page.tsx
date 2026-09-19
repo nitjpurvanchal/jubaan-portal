@@ -1,12 +1,12 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { isAdminEmail } from "@/lib/admin";
+import { requireAdmin } from "@/lib/adminAuth";
+import { createAdminClient, AdminConfigError } from "@/lib/supabase/admin";
+import { logoutAdmin } from "./login/actions";
 import BodhiLeaf from "@/components/BodhiLeaf";
-import AdminTables from "./AdminTables";
+import AdminDashboard from "./AdminTables";
 
-export const metadata = { title: "Admin — JUBAAN" };
+export const metadata = { title: "Admin — JUBAAN", robots: "noindex,nofollow" };
+export const dynamic = "force-dynamic";
 
 export type MemberRow = {
   id: string;
@@ -15,16 +15,19 @@ export type MemberRow = {
   roll_number: string | null;
   branch: string | null;
   semester: number | null;
+  phone: string | null;
   home_state: string | null;
   home_district: string | null;
-  phone: string | null;
+  interests: string[];
   onboarding_completed: boolean | null;
   created_at: string | null;
 };
 
 export type ApplicationRow = {
   id: string;
+  user_id: string;
   full_name: string | null;
+  roll_number: string | null;
   track: string | null;
   track_roles: string[];
   assigned_role: string | null;
@@ -34,113 +37,89 @@ export type ApplicationRow = {
   phone: string | null;
   portfolio_url: string | null;
   created_at: string | null;
-  email: string | null;
 };
 
-export type RsvpRow = {
-  event_title: string;
-  event_date: string | null;
-  member_name: string;
-  member_email: string;
+export type EventRow = { id: string; title: string; event_date: string | null };
+
+export type AttendeeRow = {
+  event_id: string;
+  name: string;
+  roll_number: string | null;
+  phone: string | null;
+  assigned_role: string | null;
+  track: string | null;
   rsvpd_at: string | null;
 };
 
-function NotAuthorized({ signedIn }: { signedIn: boolean }) {
+function ConfigMissing() {
   return (
     <div className="pt-[72px] min-h-[80svh] flex items-center justify-center px-5">
       <div className="max-w-md text-center rounded-3xl border border-gold/25 bg-coal/70 p-10">
         <BodhiLeaf className="w-12 h-14 text-gold mx-auto mb-6" glow />
-        <p className="text-gold tracking-[0.3em] uppercase text-xs font-semibold mb-3">
-          Restricted chamber
+        <h1 className="font-display text-3xl mb-3">Service key not configured</h1>
+        <p className="text-cream/65 leading-relaxed">
+          Add <span className="text-goldsoft font-mono text-sm">SUPABASE_SERVICE_ROLE_KEY</span> to the
+          Vercel environment variables and redeploy. The admin registers need it.
         </p>
-        <h1 className="font-display text-3xl mb-3">Not authorized</h1>
-        <p className="text-cream/65 leading-relaxed mb-8">
-          {signedIn
-            ? "This sanctum is open only to JUBAAN admins. Your account doesn't have access."
-            : "Sign in with an admin account to view the club's registers."}
-        </p>
-        <Link href={signedIn ? "/" : "/login"} className="btn-gold px-8 py-3 text-sm">
-          {signedIn ? "← Back home" : "Sign in"}
-        </Link>
       </div>
     </div>
   );
 }
 
 export default async function AdminPage() {
-  if (!isSupabaseConfigured()) {
-    return (
-      <div className="pt-[72px] min-h-[80svh] flex items-center justify-center px-5">
-        <div className="max-w-md text-center rounded-3xl border border-gold/25 bg-coal/70 p-10">
-          <BodhiLeaf className="w-12 h-14 text-gold mx-auto mb-6" glow />
-          <h1 className="font-display text-3xl mb-3">Supabase not connected</h1>
-          <p className="text-cream/65 leading-relaxed">The admin panel needs your Supabase keys.</p>
-        </div>
-      </div>
-    );
+  const admin = await requireAdmin();
+
+  let supabase;
+  try {
+    supabase = createAdminClient();
+  } catch (e) {
+    if (e instanceof AdminConfigError) return <ConfigMissing />;
+    throw e;
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login?next=%2Fadmin");
-  if (!isAdminEmail(user.email)) return <NotAuthorized signedIn />;
-
-  // NOTE: these selects rely on migration 004's admin RLS policies
-  // (public.is_jubaan_admin()) — run it in the SQL editor if tables come
-  // back empty for an admin.
-  const [{ data: members }, { data: applications }, { data: rsvps }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id,full_name,email,roll_number,branch,semester,home_state,home_district,phone,onboarding_completed,created_at")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("volunteer_applications")
-      .select("id,full_name,track,track_roles,assigned_role,skills,prior_experience,why_join,phone,portfolio_url,created_at,user_id")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("rsvps")
-      .select("created_at,user_id,events(title,event_date)")
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: members }, { data: applications }, { data: events }, { data: rsvps }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select(
+          "id,full_name,email,roll_number,branch,semester,phone,home_state,home_district,interests,onboarding_completed,created_at"
+        )
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("volunteer_applications")
+        .select(
+          "id,user_id,full_name,track,track_roles,assigned_role,skills,prior_experience,why_join,phone,portfolio_url,created_at"
+        )
+        .order("created_at", { ascending: false }),
+      supabase.from("events").select("id,title,event_date").order("event_date", { ascending: true }),
+      supabase.from("rsvps").select("id,event_id,user_id,created_at").order("created_at", { ascending: false }),
+    ]);
 
   const memberRows = (members ?? []) as MemberRow[];
+  const byId = new Map(memberRows.map((m) => [m.id, m]));
 
-  // Map user_id -> profile for application + rsvp enrichment.
-  const byId = new Map<string, MemberRow>();
-  for (const m of memberRows) byId.set(m.id, m);
-
-  type AppRaw = Omit<ApplicationRow, "email"> & { user_id: string };
+  type AppRaw = Omit<ApplicationRow, "roll_number">;
   const applicationRows: ApplicationRow[] = ((applications ?? []) as AppRaw[]).map((a) => ({
-    id: a.id,
-    full_name: a.full_name,
-    track: a.track,
+    ...a,
     track_roles: a.track_roles ?? [],
-    assigned_role: a.assigned_role,
     skills: a.skills ?? [],
-    prior_experience: a.prior_experience,
-    why_join: a.why_join,
-    phone: a.phone,
-    portfolio_url: a.portfolio_url,
-    created_at: a.created_at,
-    email: byId.get(a.user_id)?.email ?? "",
+    roll_number: byId.get(a.user_id)?.roll_number ?? null,
   }));
 
-  type RsvpRaw = {
-    created_at: string | null;
-    user_id: string;
-    events:
-      | { title: string | null; event_date: string | null }
-      | { title: string | null; event_date: string | null }[]
-      | null;
-  };
-  const rsvpRows: RsvpRow[] = ((rsvps ?? []) as RsvpRaw[]).map((r) => {
+  const appByUser = new Map(applicationRows.map((a) => [a.user_id, a]));
+  const eventRows = (events ?? []) as EventRow[];
+
+  type RsvpRaw = { id: string; event_id: string; user_id: string; created_at: string | null };
+  const attendeeRows: AttendeeRow[] = ((rsvps ?? []) as RsvpRaw[]).map((r) => {
     const p = byId.get(r.user_id);
-    const ev = Array.isArray(r.events) ? r.events[0] : r.events;
+    const app = appByUser.get(r.user_id);
     return {
-      event_title: ev?.title ?? "(deleted event)",
-      event_date: ev?.event_date ?? null,
-      member_name: p?.full_name ?? "(unknown)",
-      member_email: p?.email ?? "",
+      event_id: r.event_id,
+      name: p?.full_name ?? "(unknown member)",
+      roll_number: p?.roll_number ?? null,
+      phone: p?.phone ?? null,
+      assigned_role: app?.assigned_role ?? "Member",
+      track: app?.track ?? null,
       rsvpd_at: r.created_at,
     };
   });
@@ -148,18 +127,43 @@ export default async function AdminPage() {
   return (
     <div className="pt-[72px]">
       <section className="max-w-7xl mx-auto px-5 md:px-8 pt-14 pb-24">
-        <p className="text-gold tracking-[0.35em] uppercase text-xs font-semibold mb-3">
-          Admin sanctum
-        </p>
-        <h1 className="font-display text-4xl md:text-5xl mb-3">
-          The club <span className="text-gradient-gold">registers</span>
-        </h1>
-        <p className="text-cream/60 max-w-2xl leading-relaxed mb-10">
-          Every member, every application and every RSVP — no database digging.
-          Search any table, or export it as CSV for your records. Signed in as{" "}
-          <span className="text-goldsoft">{user.email}</span>.
-        </p>
-        <AdminTables members={memberRows} applications={applicationRows} rsvps={rsvpRows} />
+        <div className="flex flex-wrap items-start justify-between gap-6 mb-10">
+          <div>
+            <p className="text-gold tracking-[0.35em] uppercase text-xs font-semibold mb-3">
+              Admin sanctum
+            </p>
+            <h1 className="font-display text-4xl md:text-5xl mb-3">
+              The club <span className="text-gradient-gold">registers</span>
+            </h1>
+            <p className="text-cream/60 max-w-2xl leading-relaxed">
+              Every member, every application, every RSVP — no database digging.
+              Signed in as <span className="text-goldsoft">{admin.full_name ?? admin.roll_number}</span>{" "}
+              <span className="text-cream/40">({admin.roll_number})</span>.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/admins"
+              className="px-5 py-2.5 rounded-full border border-gold/40 text-gold text-sm font-semibold hover:bg-gold hover:text-ink transition-all duration-300 active:scale-95"
+            >
+              Manage admins
+            </Link>
+            <form action={logoutAdmin}>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-full border border-cream/20 text-cream/70 text-sm hover:border-cream/50 hover:text-cream transition-all duration-300 active:scale-95"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        </div>
+        <AdminDashboard
+          members={memberRows}
+          applications={applicationRows}
+          events={eventRows}
+          attendees={attendeeRows}
+        />
       </section>
     </div>
   );
