@@ -80,11 +80,21 @@ body {
 }
 .texture-grain::after {
   content: "";
-  position: absolute;
+  /* fixed (not absolute): one viewport-sized compositor layer instead of a
+     full-page-height texture on long pages, which thrashes mobile GPUs */
+  position: fixed;
   inset: 0;
   pointer-events: none;
   opacity: 0.05;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* skip rendering work for long below-fold sections until they near the
+   viewport — the browser keeps an intrinsic-size placeholder so scrollbars
+   and anchors don't jump */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
 }
 
 .text-gradient-gold {
@@ -112,15 +122,107 @@ body {
   display: none;
 }
 
-/* pencil-sketch draw-in for the page loader */
+/* pencil-sketch draw-in for the page loader.
+   Pure CSS stroke-dashoffset animation (paint-only, no layout). Pacing is
+   fixed per scene via --draw-dur on the scene layer; stagger via --draw-delay.
+   Keep in sync with CROSSFADE_MS in PageLoader.tsx. */
+:root {
+  --loader-crossfade: 380ms;
+}
 .sketch-stroke {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: sketchDraw 0.65s cubic-bezier(0.45, 0, 0.2, 1) forwards;
+  animation-name: sketchDraw;
+  animation-duration: var(--draw-dur, 650ms);
+  animation-delay: var(--draw-delay, 0ms);
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: forwards;
 }
 @keyframes sketchDraw {
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+/* loader scene crossfade: outgoing layer fades via transition, incoming
+   layer fades in via keyframes on mount. Opacity only — compositor friendly. */
+.loader-scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  will-change: opacity;
+}
+.loader-scene--active {
+  animation: loaderSceneIn var(--loader-crossfade) ease-out forwards;
+}
+.loader-scene--leaving {
+  opacity: 0;
+  transition: opacity var(--loader-crossfade) ease;
+}
+@keyframes loaderSceneIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* scene caption crossfade (opacity + translate only) */
+.loader-label-text {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+.loader-label-text--active {
+  animation: loaderLabelIn 0.35s ease-out forwards;
+}
+.loader-label-text--leaving {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+@keyframes loaderLabelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* final wordmark entrance (opacity + translate only) */
+.loader-wordmark {
+  animation: loaderWordmarkIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes loaderWordmarkIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* hard kill-switch: no loader animation at all under reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .sketch-stroke,
+  .loader-scene--active,
+  .loader-label-text--active,
+  .loader-wordmark {
+    animation: none !important;
+  }
+  .sketch-stroke {
+    stroke-dashoffset: 0 !important;
+  }
+  .loader-scene,
+  .loader-label-text {
+    opacity: 1 !important;
+    transition: none !important;
+    transform: none !important;
   }
 }
 

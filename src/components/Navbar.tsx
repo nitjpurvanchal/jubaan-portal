@@ -42,10 +42,27 @@ export default function Navbar() {
   }
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    // rAF-gated: scroll events fire far more often than frames, and React
+    // already bails on identical state — only commit when the value flips.
+    let raf = 0;
+    let last: boolean | null = null;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const v = window.scrollY > 24;
+        if (v !== last) {
+          last = v;
+          setScrolled(v);
+        }
+      });
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
   }, []);
 
   useEffect(() => {

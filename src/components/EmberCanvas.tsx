@@ -54,6 +54,10 @@ export default function EmberCanvas({ className, density = 1, interactive = true
     if (!ctx) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // coarse pointers (phones/tablets): halve GPU cost — lower DPR cap and
+    // fewer particles. Desktop keeps the full cinematic density.
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    const dprCap = coarse ? 1.5 : 2;
     const sprites = [
       makeGlowSprite(64, [[0, "rgba(255,214,130,1)"], [0.35, "rgba(233,178,80,0.55)"], [1, "rgba(233,178,80,0)"]]),
       makeGlowSprite(64, [[0, "rgba(255,190,120,1)"], [0.35, "rgba(221,122,45,0.5)"], [1, "rgba(221,122,45,0)"]]),
@@ -66,20 +70,25 @@ export default function EmberCanvas({ className, density = 1, interactive = true
     let parts: P[] = [];
     let orbs: { x: number; y: number; r: number; depth: number; phase: number; speed: number }[] = [];
     const mouse = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5 };
+    // cached canvas box — getBoundingClientRect per pointermove forces
+    // layout during scrolling; refresh only on resize/scroll instead.
+    let rect = { left: 0, top: 0, width: 1, height: 1 };
     let raf = 0;
     let running = false;
     let last = 0;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+      const r = canvas.getBoundingClientRect();
+      rect = { left: r.left, top: r.top, width: r.width, height: r.height };
       w = Math.max(1, Math.floor(rect.width));
       h = Math.max(1, Math.floor(rect.height));
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const target = Math.min(170, Math.floor(((w * h) / 11000) * density));
+      const cap = coarse ? 90 : 170;
+      const target = Math.min(cap, Math.floor(((w * h) / 11000) * density));
       parts = Array.from({ length: target }, (_, i) => {
         const leaf = i % 4 === 0;
         return {
@@ -196,9 +205,21 @@ export default function EmberCanvas({ className, density = 1, interactive = true
     };
 
     const onMouse = (e: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
       mouse.tx = (e.clientX - rect.left) / Math.max(1, rect.width);
       mouse.ty = (e.clientY - rect.top) / Math.max(1, rect.height);
+    };
+
+    // keep the cached rect fresh when scroll/resize moves the canvas —
+    // rAF-gated so scrolling itself never forces layout per event
+    let rectQueued = false;
+    const onScroll = () => {
+      if (rectQueued) return;
+      rectQueued = true;
+      requestAnimationFrame(() => {
+        rectQueued = false;
+        const r = canvas.getBoundingClientRect();
+        rect = { left: r.left, top: r.top, width: r.width, height: r.height };
+      });
     };
 
     const io = new IntersectionObserver(
@@ -218,7 +239,10 @@ export default function EmberCanvas({ className, density = 1, interactive = true
       start();
     }
     window.addEventListener("resize", resize);
-    if (interactive && !reduced) window.addEventListener("pointermove", onMouse, { passive: true });
+    if (interactive && !reduced) {
+      window.addEventListener("pointermove", onMouse, { passive: true });
+      window.addEventListener("scroll", onScroll, { passive: true });
+    }
     io.observe(canvas);
     document.addEventListener("visibilitychange", onVis);
 
@@ -227,6 +251,7 @@ export default function EmberCanvas({ className, density = 1, interactive = true
       io.disconnect();
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onMouse);
+      window.removeEventListener("scroll", onScroll);
       document.removeEventListener("visibilitychange", onVis);
     };
   }, [density, interactive, bokeh]);

@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
@@ -8,7 +14,13 @@ import { usePathname } from "next/navigation";
  * Pencil-sketch loader. On a visitor's first page view of the browser session
  * the full choreography plays for ~5.3s (mountains -> Buddha -> Nalanda ->
  * tribal tree-of-life -> wordmark). Return visits get a shorter 2.3s pass;
- * in-session route changes get a compact ~1s ring. Tap / Escape skips.
+ * in-session route changes get a compact ~950ms ring. Tap / Escape skips.
+ *
+ * Smoothness contract: every phase transition is a pure opacity crossfade
+ * (outgoing scene layer fades via CSS transition, incoming layer fades in via
+ * CSS keyframes on mount). All stroke drawing is CSS stroke-dashoffset with a
+ * fixed per-phase duration — no JS timers, no rAF stepping. Nothing animates
+ * layout properties, box-shadow, blur, or filter.
  */
 const SEEN_KEY = "jubaan-loader-seen";
 const FIRST_SCENE_MS = 1150;
@@ -16,8 +28,15 @@ const FIRST_TOTAL_MS = 5300;
 const RETURN_SCENE_MS = 520;
 const RETURN_TOTAL_MS = 2300;
 const ROUTE_MS = 950;
+/* Must match --loader-crossfade in globals.css */
+const CROSSFADE_MS = 380;
+const REDUCED_MS = 500;
 
 const STROKE = "#e8d9b8";
+
+/* Fixed pencil-draw duration per phase — consistent pacing, no per-stroke
+   duration overrides. Index: 0 Himalaya, 1 Buddha, 2 Nalanda, 3 Tribal. */
+const PHASE_DRAW_MS = [700, 950, 800, 650] as const;
 
 const SCENE_LABELS = [
   "the eternal Himalaya",
@@ -26,6 +45,9 @@ const SCENE_LABELS = [
   "the tribal hearth",
 ];
 
+/* CSS custom properties for stroke timing (typed so tsc is happy). */
+type CSSVars = CSSProperties & { [key: `--${string}`]: string | number };
+
 /* ------------------------- sketch stroke helpers ------------------------ */
 
 function Strokes({
@@ -33,13 +55,11 @@ function Strokes({
   delay = 0,
   opacity = 0.9,
   width = 2.2,
-  dur = 650,
 }: {
   d: string[];
   delay?: number;
   opacity?: number;
   width?: number;
-  dur?: number;
 }) {
   return (
     <>
@@ -49,10 +69,7 @@ function Strokes({
           d={p}
           pathLength={1}
           className="sketch-stroke"
-          style={{
-            animationDelay: `${delay + i * 70}ms`,
-            animationDuration: `${dur}ms`,
-          }}
+          style={{ "--draw-delay": `${delay + i * 70}ms` } as CSSVars}
           fill="none"
           stroke={STROKE}
           strokeWidth={width}
@@ -75,7 +92,7 @@ function Dots({ pts, delay = 0 }: { pts: [number, number][]; delay?: number }) {
           r={3.4}
           pathLength={1}
           className="sketch-stroke"
-          style={{ animationDelay: `${delay + i * 55}ms` }}
+          style={{ "--draw-delay": `${delay + i * 55}ms` } as CSSVars}
           fill="none"
           stroke={STROKE}
           strokeWidth={2}
@@ -137,7 +154,7 @@ function SceneBuddha() {
         r={102}
         pathLength={1}
         className="sketch-stroke"
-        style={{ animationDelay: "40ms", animationDuration: "900ms" }}
+        style={{ "--draw-delay": "40ms" } as CSSVars}
         fill="none"
         stroke={STROKE}
         strokeWidth={1.6}
@@ -147,7 +164,6 @@ function SceneBuddha() {
       <Strokes
         delay={90}
         width={2.6}
-        dur={950}
         d={[
           "M252,300 C240,274 228,254 222,234 C218,220 220,210 228,202 C246,188 254,160 250,130 C247,102 234,80 212,68 C206,60 204,54 202,46 C200,38 192,32 182,32 C172,32 164,38 162,46 C160,54 158,58 152,62 C140,68 130,76 124,88 C120,96 118,102 116,108 C114,114 110,120 106,128 C102,136 96,144 92,150 C90,154 92,158 96,160 C100,162 102,164 102,168 C102,172 100,174 98,176 C96,180 98,184 104,186 C108,188 110,192 112,196 C114,202 120,206 128,208 C142,212 158,214 172,212 C184,210 194,206 200,200 C206,222 202,246 194,264 C186,284 172,296 152,300",
         ]}
@@ -219,7 +235,6 @@ function SceneNalanda() {
       <Strokes
         delay={150}
         width={2.4}
-        dur={800}
         d={[
           "M66,254 L92,198 L308,198 L334,254",
           "M106,198 L124,156 L276,156 L294,198",
@@ -352,22 +367,49 @@ function SceneTribal() {
 
 const SCENES = [SceneHimalaya, SceneBuddha, SceneNalanda, SceneTribal];
 
+function SceneSvg({ index }: { index: number }) {
+  const Scene = SCENES[index];
+  return (
+    <svg
+      viewBox="0 0 400 300"
+      className="h-auto w-full"
+      role="img"
+      aria-label={`Pencil sketch: ${SCENE_LABELS[index]}`}
+    >
+      <g filter="url(#jbn-pencil)">
+        <Scene />
+      </g>
+    </svg>
+  );
+}
+
 /* -------------------------------- loader -------------------------------- */
+
+type Phase = { index: number; prev: number | null };
 
 export default function PageLoader() {
   const reduce = useReducedMotion();
   const pathname = usePathname();
   const [visible, setVisible] = useState(true);
   const [compact, setCompact] = useState(false);
-  const [scene, setScene] = useState(0);
+  /* Small state machine: `index` is the scene drawing now, `prev` is the
+     outgoing scene still crossfading out (null when settled). */
+  const [phase, setPhase] = useState<Phase>({ index: 0, prev: null });
   const firstPath = useRef(true);
   const dismissed = useRef(false);
+  const timers = useRef<number[]>([]);
+
+  const clearTimers = useCallback(() => {
+    timers.current.forEach((t) => window.clearTimeout(t));
+    timers.current = [];
+  }, []);
 
   const dismiss = useCallback(() => {
     if (dismissed.current) return;
     dismissed.current = true;
+    clearTimers();
     setVisible(false);
-  }, []);
+  }, [clearTimers]);
 
   /* initial page load: full sketch choreography.
      First view of the browser session gets the complete ~5.3s sequence;
@@ -375,7 +417,7 @@ export default function PageLoader() {
   useEffect(() => {
     if (reduce) {
       dismissed.current = true;
-      const t = window.setTimeout(() => setVisible(false), 0);
+      const t = window.setTimeout(() => setVisible(false), REDUCED_MS);
       return () => window.clearTimeout(t);
     }
     let seen = false;
@@ -387,11 +429,20 @@ export default function PageLoader() {
     const sceneMs = seen ? RETURN_SCENE_MS : FIRST_SCENE_MS;
     const totalMs = seen ? RETURN_TOTAL_MS : FIRST_TOTAL_MS;
 
-    const timers: number[] = [];
+    const advance = (i: number) => {
+      setPhase((p) => ({ index: i, prev: p.index }));
+      /* Retire the outgoing layer once its fade-out completes. */
+      timers.current.push(
+        window.setTimeout(() => {
+          setPhase((p) => (p.index === i ? { index: p.index, prev: null } : p));
+        }, CROSSFADE_MS + 80)
+      );
+    };
+
     for (let i = 1; i < SCENES.length; i++) {
-      timers.push(window.setTimeout(() => setScene(i), i * sceneMs));
+      timers.current.push(window.setTimeout(() => advance(i), i * sceneMs));
     }
-    timers.push(
+    timers.current.push(
       window.setTimeout(() => {
         try {
           window.sessionStorage.setItem(SEEN_KEY, "1");
@@ -402,9 +453,9 @@ export default function PageLoader() {
       }, totalMs)
     );
     return () => {
-      timers.forEach((t) => window.clearTimeout(t));
+      clearTimers();
     };
-  }, [reduce, dismiss]);
+  }, [reduce, dismiss, clearTimers]);
 
   /* route transitions: compact loader */
   useEffect(() => {
@@ -416,7 +467,7 @@ export default function PageLoader() {
     const raf = requestAnimationFrame(() => {
       dismissed.current = false;
       setCompact(true);
-      setScene(0);
+      setPhase({ index: 0, prev: null });
       setVisible(true);
     });
     const t = window.setTimeout(dismiss, ROUTE_MS);
@@ -445,8 +496,38 @@ export default function PageLoader() {
     return () => window.removeEventListener("keydown", onKey);
   }, [dismiss]);
 
-  if (reduce) return null;
-  const Scene = SCENES[scene];
+  /* Reduced motion: static, simple state — no animated strokes or phases. */
+  if (reduce) {
+    return (
+      <AnimatePresence>
+        {visible && (
+          <motion.div
+            key="jubaan-loader-static"
+            role="status"
+            aria-label="Loading JUBAAN"
+            onClick={dismiss}
+            className="fixed inset-0 z-[100] flex cursor-pointer flex-col items-center justify-center gap-3 bg-ink"
+            exit={{ opacity: 0, transition: { duration: 0.3, ease: "easeOut" } }}
+          >
+            <p className="pl-2 font-display text-3xl font-semibold tracking-[0.35em] text-cream">
+              JUBAAN
+            </p>
+            <p className="text-[11px] uppercase tracking-[0.28em] text-gold/80">
+              हमारी विरासत, हमारी जुबानी
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+  /* Layers to render: outgoing scene (fading) + incoming scene (drawing).
+     Keyed by scene index so the outgoing layer keeps its DOM node and the
+     CSS opacity transition actually crossfades instead of remounting. */
+  const layers =
+    phase.prev !== null && phase.prev !== phase.index
+      ? [phase.prev, phase.index]
+      : [phase.index];
 
   return (
     <AnimatePresence>
@@ -459,6 +540,21 @@ export default function PageLoader() {
           className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-ink"
           exit={{ opacity: 0, transition: { duration: 0.45, ease: "easeOut" } }}
         >
+          {/* pencil-grain filter defined once; scene layers reference it */}
+          <svg width={0} height={0} aria-hidden="true" className="absolute">
+            <defs>
+              <filter id="jbn-pencil" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.035"
+                  numOctaves="2"
+                  seed="7"
+                  result="n"
+                />
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" />
+              </filter>
+            </defs>
+          </svg>
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(217,164,65,0.07)_0%,transparent_65%)]"
@@ -484,69 +580,49 @@ export default function PageLoader() {
             </div>
           ) : (
             <div className="relative w-[min(82vw,400px)]">
-              <motion.div
-                key={scene}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.28 }}
-              >
-                <svg
-                  viewBox="0 0 400 300"
-                  className="h-auto w-full"
-                  role="img"
-                  aria-label={`Pencil sketch: ${SCENE_LABELS[scene]}`}
-                >
-                  <defs>
-                    <filter
-                      id="jbn-pencil"
-                      x="-20%"
-                      y="-20%"
-                      width="140%"
-                      height="140%"
-                    >
-                      <feTurbulence
-                        type="fractalNoise"
-                        baseFrequency="0.035"
-                        numOctaves="2"
-                        seed="7"
-                        result="n"
-                      />
-                      <feDisplacementMap
-                        in="SourceGraphic"
-                        in2="n"
-                        scale="2.6"
-                      />
-                    </filter>
-                  </defs>
-                  <g filter="url(#jbn-pencil)">
-                    <Scene />
-                  </g>
-                </svg>
-              </motion.div>
-
-              <p className="mt-4 text-center text-[11px] uppercase tracking-[0.32em] text-muted">
-                {SCENE_LABELS[scene]}
-              </p>
-
-              <AnimatePresence>
-                {scene >= SCENES.length - 1 && (
-                  <motion.div
-                    key="wordmark"
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                    className="mt-5 text-center"
+              <div className="relative aspect-[4/3]">
+                {layers.map((i) => (
+                  <div
+                    key={i}
+                    aria-hidden={i !== phase.index}
+                    className={`loader-scene ${
+                      i === phase.index
+                        ? "loader-scene--active"
+                        : "loader-scene--leaving"
+                    }`}
+                    style={{ "--draw-dur": `${PHASE_DRAW_MS[i]}ms` } as CSSVars}
                   >
-                    <p className="pl-2 font-display text-3xl font-semibold tracking-[0.35em] text-cream">
-                      JUBAAN
-                    </p>
-                    <p className="mt-2 text-[11px] uppercase tracking-[0.28em] text-gold/80">
-                      हमारी विरासत, हमारी जुबानी
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    <SceneSvg index={i} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="relative mt-4 h-4">
+                {layers.map((i) => (
+                  <p
+                    key={i}
+                    aria-hidden={i !== phase.index}
+                    className={`loader-label-text text-center text-[11px] uppercase tracking-[0.32em] text-muted ${
+                      i === phase.index
+                        ? "loader-label-text--active"
+                        : "loader-label-text--leaving"
+                    }`}
+                  >
+                    {SCENE_LABELS[i]}
+                  </p>
+                ))}
+              </div>
+
+              {phase.index >= SCENES.length - 1 && (
+                <div className="loader-wordmark mt-5 text-center">
+                  <p className="pl-2 font-display text-3xl font-semibold tracking-[0.35em] text-cream">
+                    JUBAAN
+                  </p>
+                  <p className="mt-2 text-[11px] uppercase tracking-[0.28em] text-gold/80">
+                    हमारी विरासत, हमारी जुबानी
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

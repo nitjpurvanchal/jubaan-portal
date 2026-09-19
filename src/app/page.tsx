@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import {
   motion,
@@ -38,11 +39,15 @@ function Hero() {
     <div ref={ref} className="relative min-h-[108svh] flex items-center overflow-hidden">
       {/* backdrop: slow ken-burns + scroll parallax */}
       <motion.div style={{ y: yBg, scale: scaleBg }} className="absolute inset-0">
-        <img
+        <Image
           src="/images/hero.webp"
           alt=""
           aria-hidden="true"
-          className={`w-full h-[115%] object-cover ${reduce ? "" : "animate-hero-zoom"}`}
+          fill
+          priority
+          sizes="100vw"
+          style={{ height: "115%" }}
+          className={`object-cover ${reduce ? "" : "animate-hero-zoom"}`}
         />
       </motion.div>
       <div className="absolute inset-0 bg-gradient-to-b from-ink/80 via-ink/35 to-ink" />
@@ -195,13 +200,15 @@ function Stats() {
 
 function Idea() {
   return (
-    <section className="max-w-7xl mx-auto px-5 md:px-8 py-24 md:py-32 grid md:grid-cols-2 gap-14 items-center">
+    <section className="cv-auto max-w-7xl mx-auto px-5 md:px-8 py-24 md:py-32 grid md:grid-cols-2 gap-14 items-center">
       <Reveal className="relative">
-        <div className="rounded-3xl overflow-hidden border border-gold/20 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
-          <img
+        <div className="relative h-[420px] md:h-[520px] rounded-3xl overflow-hidden border border-gold/20 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+          <Image
             src="/images/canopy.webp"
             alt="Bodhi tree canopy in golden light"
-            className="w-full h-[420px] md:h-[520px] object-cover hover:scale-105 transition-transform duration-[2s]"
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover hover:scale-105 transition-transform duration-[2s]"
           />
         </div>
         <div className="absolute -bottom-6 -right-2 md:-right-6 glass rounded-2xl px-6 py-5 shadow-xl max-w-[250px] border-gold/25">
@@ -277,7 +284,7 @@ function TiltCard({ children, className = "" }: { children: React.ReactNode; cla
 
 function CircuitPreview() {
   return (
-    <section className="relative py-24 md:py-32 bg-coal/40 border-y border-gold/10 overflow-hidden">
+    <section className="cv-auto relative py-24 md:py-32 bg-coal/40 border-y border-gold/10 overflow-hidden">
       <div className="max-w-7xl mx-auto px-5 md:px-8">
         <SectionHeading
           kicker="The sacred geography"
@@ -327,8 +334,6 @@ function CircuitPreview() {
 
 /* ----------------------------- flagship preview --------------------------- */
 
-const cardArt = ["/images/sarnath.webp", "/images/canopy.webp", "/images/hero.webp"];
-
 function FlagshipPreview() {
   const flagships = annualEvents.filter((e) => e.flagship).slice(0, 6);
   return (
@@ -344,10 +349,10 @@ function FlagshipPreview() {
             <div className="group relative rounded-3xl overflow-hidden border border-cream/10 hover:border-gold/50 transition-all duration-500 hover:-translate-y-1.5 bg-ember/60 h-full">
               <div className="h-40 relative overflow-hidden">
                 <img
-                  src={cardArt[i % cardArt.length]}
-                  alt=""
-                  aria-hidden="true"
+                  src={e.image}
+                  alt={e.title}
                   loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-110 transition-all duration-[1.8s]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ember via-ember/40 to-transparent" />
@@ -361,6 +366,19 @@ function FlagshipPreview() {
                 </p>
                 <h3 className="font-display text-xl mb-2 group-hover:text-goldsoft transition-colors">{e.title}</h3>
                 <p className="text-sm text-muted">{e.note}</p>
+                {e.attributionUrl && (
+                  <p className="mt-3 text-[11px] text-muted text-right">
+                    Photo:{" "}
+                    <a
+                      href={e.attributionUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2 hover:text-gold transition-colors"
+                    >
+                      Wikimedia Commons
+                    </a>
+                  </p>
+                )}
               </div>
             </div>
           </Reveal>
@@ -385,7 +403,7 @@ function CelebratePreview() {
     .slice(0, 3);
 
   return (
-    <section className="relative py-24 md:py-32 bg-coal/40 border-y border-gold/10 overflow-hidden">
+    <section className="cv-auto relative py-24 md:py-32 bg-coal/40 border-y border-gold/10 overflow-hidden">
       <EmberCanvas className="pointer-events-none absolute inset-0 h-full w-full opacity-50" density={0.3} interactive={false} bokeh={false} />
       <div className="relative max-w-7xl mx-auto px-5 md:px-8 grid lg:grid-cols-2 gap-14 items-center">
         <div>
@@ -478,9 +496,16 @@ function JoinCTA() {
       : `/login?next=${encodeURIComponent(`/volunteer?track=${track}`)}`;
 
   return (
-    <section className="relative py-28 md:py-36 overflow-hidden">
+    <section className="cv-auto relative py-28 md:py-36 overflow-hidden">
       <div className="absolute inset-0">
-        <img src="/images/hero.webp" alt="" aria-hidden="true" className="w-full h-full object-cover opacity-25" />
+        <Image
+          src="/images/hero.webp"
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes="100vw"
+          className="object-cover opacity-25"
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-ink via-ink/70 to-ink" />
       </div>
       <EmberCanvas className="pointer-events-none absolute inset-0 h-full w-full" density={0.7} />

@@ -270,12 +270,31 @@ export default function FallingLeaves() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const leafRef = useRef<HTMLDivElement>(null);
   const heldRef = useRef(false);
+  // cached layout measurements — reading window/document layout every frame
+  // forces style recalc; these update only on resize / content-height change.
+  const metrics = useRef({ vw: 0, vh: 0, max: 1 });
 
   useEffect(() => {
     if (!enabled) return;
     const wrap = wrapRef.current;
     const leaf = leafRef.current;
     if (!wrap || !leaf) return;
+
+    // scrollY is a cheap read (no forced reflow), but scrollHeight /
+    // innerWidth / innerHeight can dirty layout — measure once, cache in a ref.
+    const updateMetrics = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      metrics.current = {
+        vw,
+        vh,
+        max: Math.max(1, document.documentElement.scrollHeight - vh),
+      };
+    };
+    updateMetrics();
+    window.addEventListener("resize", updateMetrics, { passive: true });
+    const ro = new ResizeObserver(updateMetrics);
+    ro.observe(document.documentElement);
 
     const clamp = (v: number, lo: number, hi: number) =>
       Math.min(hi, Math.max(lo, v));
@@ -368,9 +387,8 @@ export default function FallingLeaves() {
       const dt = clamp((now - last) / 1000, 0.0005, 0.05);
       last = now;
 
-      const vh = window.innerHeight;
-      const vw = window.innerWidth;
-      const max = Math.max(1, document.documentElement.scrollHeight - vh);
+      // read cached measurements — no layout reads inside the frame loop
+      const { vw, vh, max } = metrics.current;
       const p = clamp(window.scrollY / max, 0, 1);
 
       // --- home (scroll-ride) target, same math as before ---
@@ -447,6 +465,8 @@ export default function FallingLeaves() {
 
     return () => {
       cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener("resize", updateMetrics);
       leaf.removeEventListener("pointerdown", onDown);
       leaf.removeEventListener("pointermove", onMove);
       leaf.removeEventListener("pointerup", onRelease);
