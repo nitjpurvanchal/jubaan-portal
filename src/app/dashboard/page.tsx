@@ -5,7 +5,10 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import Reveal from "@/components/Reveal";
 import BodhiLeaf from "@/components/BodhiLeaf";
 import DashboardClient from "./DashboardClient";
+import VolunteerCertificate from "@/components/VolunteerCertificate";
 import type { Profile } from "@/lib/profile";
+import type { VolunteerApplication, RoleName } from "@/lib/volunteer";
+import { ROLE_BADGE_STYLES, certificateId } from "@/lib/volunteer";
 
 export const metadata = { title: "Dashboard — JUBAAN" };
 
@@ -48,7 +51,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: profileData }, { data: rsvpsData }] = await Promise.all([
+  const [{ data: profileData }, { data: rsvpsData }, { data: appData }] = await Promise.all([
     supabase
       .from("profiles")
       .select("id,full_name,email,avatar_url,home_state,created_at,roll_number,branch,semester,phone,home_district,interests,onboarding_completed")
@@ -59,12 +62,20 @@ export default async function DashboardPage() {
       .select("event_id, events(title,event_date,location,is_flagship)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("volunteer_applications")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
 
   const profile = (profileData ?? null) as Profile | null;
+  const application = (appData ?? null) as VolunteerApplication | null;
 
   // Onboarding gate: every member completes their profile first.
   if (!profile || !profile.onboarding_completed) redirect("/onboarding");
+
+  const role = ((application?.assigned_role as RoleName) ?? "Member") as RoleName;
 
   const { data: mineData } = await supabase
     .from("events")
@@ -108,8 +119,10 @@ export default async function DashboardPage() {
           <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-gold/10 blur-[80px] pointer-events-none" />
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-display text-2xl">Member profile</h2>
-            <span className="text-[11px] tracking-[0.2em] uppercase text-goldsoft/80 border border-gold/30 rounded-full px-3.5 py-1.5">
-              Verified member
+            <span
+              className={`text-[11px] tracking-[0.2em] uppercase rounded-full px-4 py-1.5 border font-bold ${ROLE_BADGE_STYLES[role] ?? ROLE_BADGE_STYLES.Member}`}
+            >
+              {role}
             </span>
           </div>
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
@@ -134,8 +147,53 @@ export default async function DashboardPage() {
           )}
         </Reveal>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          {[
+        {application ? (
+          <Reveal className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-gold tracking-[0.3em] uppercase text-xs font-semibold mb-1">Your honour</p>
+                <h2 className="font-display text-3xl">Crew certificate</h2>
+              </div>
+              <Link href="/volunteer" className="text-sm text-gold hover:text-goldsoft font-semibold">
+                View details →
+              </Link>
+            </div>
+            <VolunteerCertificate
+              name={application.full_name || profile.full_name || "JUBAAN Volunteer"}
+              role={role}
+              date={new Date(application.created_at).toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+              certId={certificateId(application)}
+            />
+          </Reveal>
+        ) : (
+          <Reveal className="mb-12 rounded-3xl border border-gold/25 bg-gradient-to-br from-coal/80 to-ink/80 p-8 md:p-10 relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-72 h-72 bg-gold/10 blur-[90px] rounded-full pointer-events-none" />
+            <div className="relative flex flex-col md:flex-row md:items-center gap-6 justify-between">
+              <div>
+                <p className="text-gold tracking-[0.3em] uppercase text-xs font-semibold mb-2">Join the crew</p>
+                <h2 className="font-display text-3xl mb-2">
+                  Become a <span className="text-gradient-gold">volunteer</span>
+                </h2>
+                <p className="text-cream/65 max-w-lg leading-relaxed text-sm">
+                  Tell us your talents — dance, music, poetry, design, organising — and get your
+                  role instantly, with a personal certificate of volunteership.
+                </p>
+              </div>
+              <Link
+                href="/volunteer"
+                className="shrink-0 px-8 py-3.5 rounded-full bg-gold text-ink font-bold hover:bg-goldsoft transition-all duration-300 shadow-[0_0_28px_rgba(217,164,65,0.35)] text-center"
+              >
+                Apply now →
+              </Link>
+            </div>
+          </Reveal>
+        )}
+
+        <div className="grid md:grid-cols-3 gap-6 mb-12">          {[
             { n: String(rsvps.length), label: "Events RSVP'd" },
             { n: String(upcoming.length), label: "Upcoming gatherings" },
             { n: String(mine.length), label: "Events you created" },
@@ -172,6 +230,11 @@ export default async function DashboardPage() {
           <Link href="/calendar" className="px-7 py-3.5 rounded-full border border-cream/25 hover:border-gold hover:text-gold transition-colors">
             Open calendar
           </Link>
+          {!application && (
+            <Link href="/volunteer" className="px-7 py-3.5 rounded-full border border-gold/50 text-goldsoft hover:bg-gold/10 transition-colors">
+              Become a volunteer
+            </Link>
+          )}
         </Reveal>
       </section>
     </div>

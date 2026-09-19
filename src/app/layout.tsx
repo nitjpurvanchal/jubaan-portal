@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageLoader from "@/components/PageLoader";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -43,6 +45,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${fraunces.variable} ${inter.variable}`}>
       <body className="bg-ink text-cream font-sans min-h-screen flex flex-col texture-grain antialiased">
+        <Suspense fallback={null}>
+          <PageLoader />
+        </Suspense>
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

@@ -112,6 +112,63 @@ body {
   display: none;
 }
 
+/* pencil-sketch draw-in for the page loader */
+.sketch-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: sketchDraw 0.65s cubic-bezier(0.45, 0, 0.2, 1) forwards;
+}
+@keyframes sketchDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* periodic light sweep across the logo medallion */
+.shine-sweep {
+  transform: translateX(-170%) skewX(-18deg);
+  animation: shineSweep 7s ease-in-out infinite;
+}
+@keyframes shineSweep {
+  0% {
+    transform: translateX(-170%) skewX(-18deg);
+  }
+  45%,
+  100% {
+    transform: translateX(340%) skewX(-18deg);
+  }
+}
+
+/* animated underline for quiet links */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  height: 1px;
+  width: 100%;
+  background: var(--color-gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.link-underline:hover::after,
+.link-underline:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* visible, on-brand keyboard focus */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
 /* shared button language */
 .btn-gold {
   display: inline-flex;

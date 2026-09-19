@@ -1,6 +1,43 @@
-import Image from "next/image";
 import Link from "next/link";
 import BodhiLeaf from "./BodhiLeaf";
+import LogoMark from "./LogoMark";
+
+const explore = [
+  { href: "/circuit", label: "Bodhi Circuit" },
+  { href: "/calendar", label: "Events Calendar" },
+  { href: "/events", label: "All Events" },
+  { href: "/about", label: "About JUBAAN" },
+];
+
+const discover = [
+  { href: "/legends", label: "Legends" },
+  { href: "/languages", label: "Languages" },
+  { href: "/heritage", label: "Heritage" },
+  { href: "/volunteer", label: "Volunteer" },
+];
+
+const community = [
+  { href: "/signup", label: "Become a member" },
+  { href: "/login", label: "Sign in" },
+  { href: "/dashboard", label: "My dashboard" },
+];
+
+function LinkCol({ title, items }: { title: string; items: { href: string; label: string }[] }) {
+  return (
+    <div>
+      <p className="text-xs tracking-[0.25em] uppercase text-gold mb-5">{title}</p>
+      <ul className="space-y-3 text-sm text-cream/70">
+        {items.map((l) => (
+          <li key={l.href}>
+            <Link href={l.href} className="link-underline hover:text-gold transition-colors duration-300">
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export default function Footer() {
   return (
@@ -9,16 +46,10 @@ export default function Footer() {
         aria-hidden="true"
         className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[720px] h-[320px] rounded-full bg-gold/8 blur-[120px]"
       />
-      <div className="relative max-w-7xl mx-auto px-5 md:px-8 py-14 grid gap-10 md:grid-cols-4">
+      <div className="relative max-w-7xl mx-auto px-5 md:px-8 py-14 grid gap-10 md:grid-cols-5">
         <div className="md:col-span-2">
           <div className="flex items-center gap-4 mb-5">
-            <Image
-              src="/logo/jubaan-logo-512.png"
-              alt="JUBAAN embroidered logo"
-              width={64}
-              height={64}
-              className="rounded-full object-cover ring-1 ring-gold/40 shadow-[0_0_24px_rgba(217,164,65,0.3)]"
-            />
+            <LogoMark size={60} shine={false} glow={false} />
             <div>
               <p className="font-display font-bold text-2xl tracking-[0.1em]">JUBAAN</p>
               <p className="text-[10px] tracking-[0.28em] uppercase text-gold/80">
@@ -35,29 +66,17 @@ export default function Footer() {
             “हमारी विरासत, हमारी जुबानी”
           </p>
         </div>
+        <LinkCol title="Explore" items={explore} />
+        <LinkCol title="Discover" items={discover} />
         <div>
-          <p className="text-xs tracking-[0.25em] uppercase text-gold mb-4">Explore</p>
-          <ul className="space-y-2.5 text-sm text-cream/70">
-            <li><Link href="/circuit" className="hover:text-gold transition-colors">Bodhi Circuit</Link></li>
-            <li><Link href="/calendar" className="hover:text-gold transition-colors">Events Calendar</Link></li>
-            <li><Link href="/events" className="hover:text-gold transition-colors">All Events</Link></li>
-            <li><Link href="/about" className="hover:text-gold transition-colors">About JUBAAN</Link></li>
-          </ul>
-        </div>
-        <div>
-          <p className="text-xs tracking-[0.25em] uppercase text-gold mb-4">Community</p>
-          <ul className="space-y-2.5 text-sm text-cream/70">
-            <li><Link href="/signup" className="hover:text-gold transition-colors">Become a member</Link></li>
-            <li><Link href="/login" className="hover:text-gold transition-colors">Sign in</Link></li>
-            <li><Link href="/dashboard" className="hover:text-gold transition-colors">My dashboard</Link></li>
-          </ul>
-          <BodhiLeaf className="w-8 h-10 text-gold/40 mt-6" />
+          <LinkCol title="Community" items={community} />
+          <BodhiLeaf className="w-8 h-10 text-gold/40 mt-6 transition-transform duration-500 hover:rotate-12" />
         </div>
       </div>
       <div className="relative border-t border-cream/5">
         <div className="max-w-7xl mx-auto px-5 md:px-8 py-6 flex flex-col md:flex-row justify-between gap-2 text-xs text-muted">
           <p>© {new Date().getFullYear()} JUBAAN — The Cultural Club of NIT Jalandhar</p>
-          <p>Cultural · Heritage · Literary · Regional Arts</p>
+          <p className="tracking-[0.2em] uppercase">Cultural · Heritage · Literary · Regional Arts</p>
         </div>
       </div>
     </footer>

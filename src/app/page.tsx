@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -17,59 +16,13 @@ import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import BodhiLeaf from "@/components/BodhiLeaf";
 import EmberCanvas from "@/components/EmberCanvas";
+import LogoMark from "@/components/LogoMark";
+import FallingLeaves from "@/components/FallingLeaves";
 import { circuitSites, annualEvents } from "@/lib/data";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
 /* ---------------------------------- hero ---------------------------------- */
-
-function HeroLogo() {
-  const reduce = useReducedMotion();
-  return (
-    <div className="relative mx-auto w-40 h-40 md:w-52 md:h-52">
-      {/* rotating orbit ring */}
-      {!reduce && (
-        <svg
-          viewBox="0 0 200 200"
-          aria-hidden="true"
-          className="absolute -inset-5 animate-spin-slower opacity-70"
-        >
-          <circle
-            cx="100"
-            cy="100"
-            r="96"
-            fill="none"
-            stroke="url(#orbitGold)"
-            strokeWidth="1.5"
-            strokeDasharray="4 10"
-            strokeLinecap="round"
-          />
-          <defs>
-            <linearGradient id="orbitGold" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#eac46e" />
-              <stop offset="100%" stopColor="#8a5f1e" />
-            </linearGradient>
-          </defs>
-        </svg>
-      )}
-      <div className="absolute -inset-5 rounded-full border border-gold/15" aria-hidden="true" />
-      <div
-        aria-hidden="true"
-        className="absolute inset-2 rounded-full bg-gold/25 blur-3xl animate-glow-pulse"
-      />
-      <div className={reduce ? "" : "animate-float-y"}>
-        <Image
-          src="/logo/jubaan-logo-512.png"
-          alt="JUBAAN — embroidered club logo"
-          width={208}
-          height={208}
-          priority
-          className="relative w-full h-full rounded-full object-cover ring-2 ring-gold/50 shadow-[0_0_70px_rgba(217,164,65,0.45)]"
-        />
-      </div>
-    </div>
-  );
-}
 
 function Hero() {
   const ref = useRef<HTMLDivElement>(null);
@@ -105,8 +58,9 @@ function Hero() {
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1.1, ease }}
+          className="flex justify-center"
         >
-          <HeroLogo />
+          <LogoMark size={200} orbit glow />
         </motion.div>
 
         <motion.p
@@ -322,7 +276,7 @@ function TiltCard({ children, className = "" }: { children: React.ReactNode; cla
 
 function CircuitPreview() {
   return (
-    <section className="relative py-24 md:py-28 bg-coal/40 border-y border-gold/10 overflow-hidden">
+    <section className="relative py-24 md:py-32 bg-coal/40 border-y border-gold/10 overflow-hidden">
       <div className="max-w-7xl mx-auto px-5 md:px-8">
         <SectionHeading
           kicker="The sacred geography"
@@ -490,6 +444,7 @@ function CelebratePreview() {
 /* -------------------------------- join cta -------------------------------- */
 
 function JoinCTA() {
+  const reduce = useReducedMotion();
   return (
     <section className="relative py-28 md:py-36 overflow-hidden">
       <div className="absolute inset-0">
@@ -499,14 +454,9 @@ function JoinCTA() {
       <EmberCanvas className="pointer-events-none absolute inset-0 h-full w-full" density={0.7} />
       <div className="relative max-w-3xl mx-auto px-5 text-center">
         <Reveal>
-          <Image
-            src="/logo/jubaan-logo-512.png"
-            alt="JUBAAN — embroidered club logo"
-            width={120}
-            height={120}
-            loading="lazy"
-            className="rounded-full object-cover mx-auto mb-8 ring-2 ring-gold/50 shadow-[0_0_60px_rgba(217,164,65,0.45)] animate-float-y"
-          />
+          <div className={`flex justify-center mb-8 ${reduce ? "" : "animate-float-y"}`}>
+            <LogoMark size={120} glow />
+          </div>
           <h2 className="font-display text-4xl md:text-6xl leading-tight mb-6">
             Become part of the <span className="text-gradient-gold">sangha</span>
           </h2>
@@ -532,6 +482,7 @@ function JoinCTA() {
 export default function Home() {
   return (
     <>
+      <FallingLeaves />
       <Hero />
       <Stats />
       <Idea />
