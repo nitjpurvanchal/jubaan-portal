@@ -187,7 +187,7 @@ export const annualEvents: AnnualEvent[] = [
     flagship: true,
     note: "Tribal art, music & dance",
     image: "/images/real/festivals/jharkhand-foundation-day.jpg",
-    attributionUrl: "https://commons.wikimedia.org/wiki/File:Firkal_slowly_decaying_martial_dance_of_ChotaNagpur_of_Jharkhand_IMG_1069_04.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Santhal_tribes_dancing_in_BAHA_PARAB_(Sarhul_festival).jpg",
   },
   {
     title: "Janjatiya Gaurav Diwas / Birsa Munda Day",
@@ -195,7 +195,7 @@ export const annualEvents: AnnualEvent[] = [
     flagship: true,
     note: "Tribal heritage tribute",
     image: "/images/real/festivals/janjatiya-gaurav-diwas.jpg",
-    attributionUrl: "https://commons.wikimedia.org/wiki/File:Birsa_Munda_1988_stamp_of_India.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Birsa_Munda_Statue_at_Naya_More.jpg",
   },
   {
     title: "Dev Deepawali",
@@ -251,7 +251,7 @@ export const annualEvents: AnnualEvent[] = [
     flagship: true,
     note: "Bihar's history, art & traditions",
     image: "/images/real/festivals/bihar-diwas.jpg",
-    attributionUrl: "https://commons.wikimedia.org/wiki/File:Golghar,_Patna,_Bihar.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:The_Vice_President%2C_Shri_M._Venkaiah_Naidu_lighting_the_lamp_to_inaugurate_the_106th_Bihar_Diwas_Celebrations_and_closing_ceremony_of_Champaran_Satyagrah_Centenary_Year%2C_Bihar.jpg",
   },
   {
     title: "Food Fest",

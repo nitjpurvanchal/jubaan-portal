@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BodhiLeaf from "./BodhiLeaf";
 import LogoMark from "./LogoMark";
+import { WHATSAPP_URL, INSTAGRAM_URL } from "@/lib/social";
 
 const explore = [
   { href: "/circuit", label: "Bodhi Circuit" },
@@ -20,20 +21,37 @@ const community = [
   { href: "/signup", label: "Become a member" },
   { href: "/login", label: "Sign in" },
   { href: "/dashboard", label: "My dashboard" },
+  { href: WHATSAPP_URL, label: "Join our WhatsApp group", external: true },
+  { href: INSTAGRAM_URL, label: "Follow us on Instagram", external: true },
 ];
 
-function LinkCol({ title, items }: { title: string; items: { href: string; label: string }[] }) {
+type LinkItem = { href: string; label: string; external?: boolean };
+
+function LinkCol({ title, items }: { title: string; items: LinkItem[] }) {
   return (
     <div>
       <p className="text-xs tracking-[0.25em] uppercase text-gold mb-5">{title}</p>
       <ul className="space-y-3 text-sm text-cream/70">
-        {items.map((l) => (
-          <li key={l.href}>
-            <Link href={l.href} className="link-underline hover:text-gold transition-colors duration-300">
-              {l.label}
-            </Link>
-          </li>
-        ))}
+        {items.map((l) =>
+          l.external ? (
+            <li key={l.href}>
+              <a
+                href={l.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link-underline hover:text-gold transition-colors duration-300"
+              >
+                {l.label}
+              </a>
+            </li>
+          ) : (
+            <li key={l.href}>
+              <Link href={l.href} className="link-underline hover:text-gold transition-colors duration-300">
+                {l.label}
+              </Link>
+            </li>
+          )
+        )}
       </ul>
     </div>
   );

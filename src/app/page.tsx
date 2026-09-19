@@ -20,6 +20,7 @@ import EmberCanvas from "@/components/EmberCanvas";
 import LogoMark from "@/components/LogoMark";
 import FallingLeaves from "@/components/FallingLeaves";
 import { circuitSites, annualEvents } from "@/lib/data";
+import { WHATSAPP_URL, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "@/lib/social";
 import { useSession } from "@/hooks/useSession";
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -460,6 +461,90 @@ function CelebratePreview() {
   );
 }
 
+/* ------------------------------ community join ---------------------------- */
+
+function CommunityJoin() {
+  return (
+    <section className="cv-auto relative py-24 md:py-32 overflow-hidden">
+      <div className="max-w-6xl mx-auto px-5 md:px-8">
+        <SectionHeading
+          kicker="The sangha beyond the portal"
+          title="Join the community"
+          sub="This portal is our vihara — but the conversation lives with the people. Chat with fellow members and follow our journey between the festivals."
+        />
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <Reveal>
+            <div className="group h-full rounded-3xl border border-cream/10 bg-ember/60 p-8 hover:border-gold/50 transition-all duration-500 hover:-translate-y-1.5 flex flex-col items-center text-center">
+              <div className="rounded-2xl bg-cream p-3 shadow-[0_16px_50px_rgba(0,0,0,0.45)]">
+                <Image
+                  src="/whatsapp-qr.svg"
+                  alt="QR code to join the JUBAAN WhatsApp group"
+                  width={176}
+                  height={176}
+                  className="w-44 h-44"
+                />
+              </div>
+              <h3 className="font-display text-2xl mt-6 mb-3 group-hover:text-goldsoft transition-colors">
+                Join our WhatsApp group
+              </h3>
+              <p className="text-cream/60 text-sm leading-relaxed mb-7 max-w-xs">
+                Scan the code or tap below to step into the group chat — event
+                updates, song requests, festival plans and everyday banter.
+              </p>
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-gold px-8 py-3.5 text-sm mt-auto"
+              >
+                Join our WhatsApp group{" "}
+                <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div className="group h-full rounded-3xl border border-cream/10 bg-ember/60 p-8 hover:border-gold/50 transition-all duration-500 hover:-translate-y-1.5 flex flex-col items-center text-center">
+              <div className="w-44 h-44 rounded-2xl bg-gold/10 border border-gold/30 flex items-center justify-center shadow-[0_16px_50px_rgba(0,0,0,0.45)]">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  className="w-20 h-20 text-gold"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="4.2" />
+                  <circle cx="17.4" cy="6.6" r="1.4" fill="currentColor" stroke="none" />
+                </svg>
+              </div>
+              <h3 className="font-display text-2xl mt-6 mb-3 group-hover:text-goldsoft transition-colors">
+                Follow us on Instagram
+              </h3>
+              <p className="text-goldsoft font-semibold tracking-wide mb-2">
+                {INSTAGRAM_HANDLE}
+              </p>
+              <p className="text-cream/60 text-sm leading-relaxed mb-7 max-w-xs">
+                Reels from the stage, festival glimpses and throwbacks from the
+                Bodhi Circuit — straight to your feed.
+              </p>
+              <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost px-8 py-3.5 text-sm mt-auto"
+              >
+                Follow us on Instagram{" "}
+                <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* -------------------------------- join cta -------------------------------- */
 
 const JOIN_TRACKS = [
@@ -584,6 +669,7 @@ export default function Home() {
       <CircuitPreview />
       <FlagshipPreview />
       <CelebratePreview />
+      <CommunityJoin />
       <JoinCTA />
     </>
   );
