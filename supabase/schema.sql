@@ -63,32 +63,60 @@ alter table public.profiles enable row level security;
 alter table public.events   enable row level security;
 alter table public.rsvps    enable row level security;
 
+-- idempotent unique key so the seed insert below never duplicates
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'events_title_date_key') then
+    alter table public.events add constraint events_title_date_key unique (title, event_date);
+  end if;
+end $$;
+
 -- profiles: anyone can read; owners can update their own
+drop policy if exists "profiles_read_all" on public.profiles;
 create policy "profiles_read_all"
   on public.profiles for select using (true);
+drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own"
   on public.profiles for update using (auth.uid() = id);
 
 -- events: anyone can read; signed-in users can create
+drop policy if exists "events_read_all" on public.events;
 create policy "events_read_all"
   on public.events for select using (true);
+drop policy if exists "events_insert_auth" on public.events;
 create policy "events_insert_auth"
   on public.events for insert with check (auth.uid() is not null);
+drop policy if exists "events_update_own" on public.events;
 create policy "events_update_own"
   on public.events for update using (auth.uid() = created_by);
+drop policy if exists "events_delete_own" on public.events;
 create policy "events_delete_own"
   on public.events for delete using (auth.uid() = created_by);
 
 -- rsvps: users manage their own; event creators see rsvps for their events
+drop policy if exists "rsvps_read_own" on public.rsvps;
 create policy "rsvps_read_own"
   on public.rsvps for select
   using (auth.uid() = user_id
      or exists (select 1 from public.events e
                 where e.id = rsvps.event_id and e.created_by = auth.uid()));
+drop policy if exists "rsvps_insert_own" on public.rsvps;
 create policy "rsvps_insert_own"
   on public.rsvps for insert with check (auth.uid() = user_id);
+drop policy if exists "rsvps_delete_own" on public.rsvps;
 create policy "rsvps_delete_own"
   on public.rsvps for delete using (auth.uid() = user_id);
+
+-- ---------- public RSVP counts (safe aggregate, no user ids exposed) ----------
+-- The events page calls this via supabase.rpc("event_rsvp_counts").
+create or replace function public.event_rsvp_counts()
+returns table (event_id uuid, rsvp_count bigint)
+language sql
+security definer set search_path = public
+as $$
+  select event_id, count(*) from public.rsvps group by event_id;
+$$;
+grant execute on function public.event_rsvp_counts() to anon, authenticated;
 
 -- ---------- seed: JUBAAN annual calendar (2026-27) ----------
 insert into public.events (title, description, event_date, location, is_flagship) values
@@ -110,4 +138,4 @@ insert into public.events (title, description, event_date, location, is_flagship
   ('Food Fest', 'Traditional food and heritage exhibition — litti-chokha, malpua, pitha, Banarasi thandai, dhuska, chilka roti and more.', '2027-04-10', 'NIT Jalandhar', true),
   ('Mithila Mahotsav', 'Maithili songs, Mithila painting workshops and Bihar folk culture.', '2027-04-24', 'NIT Jalandhar', false),
   ('Year-End Cultural Showcase', 'Closing showcase of the year''s cultural work by members.', '2027-05-08', 'NIT Jalandhar', false)
-on conflict do nothing;
+on conflict (title, event_date) do nothing;

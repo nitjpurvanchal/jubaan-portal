@@ -43,13 +43,14 @@ export default function EventsPage() {
           .order("event_date", { ascending: true });
         if (error) throw error;
         if (data && data.length > 0) {
-          const withCounts = await Promise.all(
-            data.map(async (e: any) => {
-              const { count } = await supabase.from("rsvps").select("*", { count: "exact", head: true }).eq("event_id", e.id);
-              return { ...e, rsvpCount: count ?? 0 };
-            })
+          // One safe aggregate call for public counts (no user ids exposed).
+          const { data: counts } = await supabase.rpc("event_rsvp_counts");
+          const countMap = new Map(
+            ((counts ?? []) as any[]).map((c: any) => [String(c.event_id), Number(c.rsvp_count) || 0])
           );
-          setEvents(withCounts);
+          setEvents(
+            data.map((e: any) => ({ ...e, rsvpCount: countMap.get(String(e.id)) ?? 0 }))
+          );
         } else {
           setEvents(annualEvents.map((e, i) => ({ id: `seed-${i}`, title: e.title, description: e.note, event_date: e.date, location: "NIT Jalandhar", is_flagship: e.flagship })));
         }
