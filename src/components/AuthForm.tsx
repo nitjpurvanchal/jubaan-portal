@@ -25,7 +25,7 @@ function Field({
   );
 }
 
-export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export default function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: string | null }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -59,7 +59,10 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
           password,
         });
         if (error) throw error;
-        router.push("/dashboard");
+        // Make sure the session is persisted to cookies before navigating,
+        // then go where the user was headed (e.g. a volunteer track).
+        await supabase.auth.getSession();
+        router.push(next || "/dashboard");
         router.refresh();
       }
     } catch (err: unknown) {

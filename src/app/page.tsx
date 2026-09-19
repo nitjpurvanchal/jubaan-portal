@@ -19,6 +19,7 @@ import EmberCanvas from "@/components/EmberCanvas";
 import LogoMark from "@/components/LogoMark";
 import FallingLeaves from "@/components/FallingLeaves";
 import { circuitSites, annualEvents } from "@/lib/data";
+import { useSession } from "@/hooks/useSession";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -443,8 +444,39 @@ function CelebratePreview() {
 
 /* -------------------------------- join cta -------------------------------- */
 
+const JOIN_TRACKS = [
+  {
+    track: "volunteer",
+    title: "Join as a Volunteer",
+    desc: "On-ground seva — discipline, stage logistics, hospitality, registrations.",
+    accent: "group-hover:border-bodhi/60",
+    dot: "bg-bodhi",
+  },
+  {
+    track: "creative",
+    title: "Join as a Creative",
+    desc: "Act, dance, sing, write poetry, paint — take the stage or shape our look.",
+    accent: "group-hover:border-saffron/60",
+    dot: "bg-saffron",
+  },
+  {
+    track: "member",
+    title: "Join as a Member",
+    desc: "Belong to every celebration and grow into your role over time.",
+    accent: "group-hover:border-gold/60",
+    dot: "bg-gold",
+  },
+] as const;
+
 function JoinCTA() {
   const reduce = useReducedMotion();
+  const { user, loading: sessionLoading } = useSession();
+
+  const trackHref = (track: string) =>
+    user
+      ? `/volunteer?track=${track}`
+      : `/login?next=${encodeURIComponent(`/volunteer?track=${track}`)}`;
+
   return (
     <section className="relative py-28 md:py-36 overflow-hidden">
       <div className="absolute inset-0">
@@ -452,26 +484,64 @@ function JoinCTA() {
         <div className="absolute inset-0 bg-gradient-to-b from-ink via-ink/70 to-ink" />
       </div>
       <EmberCanvas className="pointer-events-none absolute inset-0 h-full w-full" density={0.7} />
-      <div className="relative max-w-3xl mx-auto px-5 text-center">
+      <div className="relative max-w-4xl mx-auto px-5 text-center">
         <Reveal>
           <div className={`flex justify-center mb-8 ${reduce ? "" : "animate-float-y"}`}>
             <LogoMark size={120} glow />
           </div>
+          <p className="text-gold tracking-[0.35em] uppercase text-xs font-semibold mb-4">
+            {user ? "Welcome back to the sangha" : "Become part of the sangha"}
+          </p>
           <h2 className="font-display text-4xl md:text-6xl leading-tight mb-6">
-            Become part of the <span className="text-gradient-gold">sangha</span>
+            {user ? (
+              <>Choose your <span className="text-gradient-gold">path</span></>
+            ) : (
+              <>Walk with <span className="text-gradient-gold">us</span></>
+            )}
           </h2>
           <p className="text-cream/70 text-lg leading-relaxed mb-10 max-w-xl mx-auto">
-            Create your account to RSVP for events, add gatherings to the
-            community calendar, and walk with fellow travellers of the
-            Bodhi Circuit.
+            {user
+              ? "Pick how you want to serve — your profile is preloaded, your role is assigned instantly."
+              : "Pick a path to begin — you'll sign in first, then your profile is preloaded automatically."}
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/signup" className="btn-gold px-10 py-4 text-base">
-              Join the community
-            </Link>
-            <Link href="/events" className="btn-ghost px-10 py-4 text-base">
-              Browse events
-            </Link>
+
+          {sessionLoading ? (
+            <div className="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto" aria-hidden="true">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-40 rounded-3xl bg-cream/5 border border-cream/10 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-left">
+              {JOIN_TRACKS.map((t) => (
+                <Link
+                  key={t.track}
+                  href={trackHref(t.track)}
+                  className={`group rounded-3xl border border-cream/12 bg-coal/60 backdrop-blur p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.5)] ${t.accent}`}
+                >
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${t.dot} mb-4`} aria-hidden="true" />
+                  <span className="block font-display text-xl text-cream mb-2 group-hover:text-goldsoft transition-colors">
+                    {t.title}
+                  </span>
+                  <span className="block text-sm text-cream/55 leading-relaxed mb-4">{t.desc}</span>
+                  <span className="text-sm font-semibold text-gold">
+                    Begin <span className="inline-block transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">→</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-wrap justify-center gap-4 mt-10">
+            {user ? (
+              <Link href="/dashboard" className="btn-ghost px-10 py-4 text-base">
+                Go to your dashboard
+              </Link>
+            ) : (
+              <Link href="/events" className="btn-ghost px-10 py-4 text-base">
+                Browse events
+              </Link>
+            )}
           </div>
         </Reveal>
       </div>

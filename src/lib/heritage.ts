@@ -2,6 +2,8 @@ export type HeritageSite = {
   name: string;
   state: "Bihar" | "Uttar Pradesh" | "Jharkhand";
   location: string;
+  image: string;
+  attributionUrl: string;
   designation?: string;
   description: string;
   bestTime: string;
@@ -11,6 +13,8 @@ export const heritageSites: HeritageSite[] = [
   // ------------------------------ BIHAR ------------------------------
   {
     name: "Barabar Caves",
+    image: "/images/real/heritage/barabar-caves.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Barabar_hill_with_Sudama_and_Lomas_Rishi_caves.jpg",
     state: "Bihar",
     location: "Jehanabad district",
     designation: "Mauryan · 3rd century BCE",
@@ -20,6 +24,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Tomb of Sher Shah Suri",
+    image: "/images/real/heritage/tomb-of-sher-shah-suri.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Sher_Shah_Suri_Tomb.jpg",
     state: "Bihar",
     location: "Sasaram",
     designation: "16th century",
@@ -29,6 +35,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Vikramshila",
+    image: "/images/real/heritage/vikramshila.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Vikramshila_Mahavihara.jpg",
     state: "Bihar",
     location: "Near Bhagalpur",
     designation: "Pala era · 8th–9th century",
@@ -38,6 +46,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Golghar",
+    image: "/images/real/heritage/golghar.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Golghar,_Patna,_Bihar.jpg",
     state: "Bihar",
     location: "Patna",
     designation: "1786",
@@ -47,6 +57,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Kumhrar",
+    image: "/images/real/heritage/kumhrar.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Kumhrar_-_Patna_(1).jpg",
     state: "Bihar",
     location: "Patna",
     designation: "Mauryan · 3rd century BCE",
@@ -57,6 +69,8 @@ export const heritageSites: HeritageSite[] = [
   // --------------------------- UTTAR PRADESH ---------------------------
   {
     name: "Taj Mahal",
+    image: "/images/real/heritage/taj-mahal.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Taj_Mahal,_Agra,_India_edit2.jpg",
     state: "Uttar Pradesh",
     location: "Agra",
     designation: "UNESCO World Heritage Site",
@@ -66,6 +80,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Agra Fort",
+    image: "/images/real/heritage/agra-fort.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Agra_03-2016_14_Agra_Fort.jpg",
     state: "Uttar Pradesh",
     location: "Agra",
     designation: "UNESCO World Heritage Site",
@@ -75,6 +91,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Fatehpur Sikri",
+    image: "/images/real/heritage/fatehpur-sikri.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Panch_Mahal-Fatehpur-Fatehpur_Sikri_India0014.JPG",
     state: "Uttar Pradesh",
     location: "Near Agra",
     designation: "UNESCO World Heritage Site",
@@ -84,6 +102,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Varanasi Ghats",
+    image: "/images/real/heritage/varanasi-ghats.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Varanasi,_India,_Ghats_on_Ganges_River.jpg",
     state: "Uttar Pradesh",
     location: "Varanasi",
     designation: "Living heritage",
@@ -93,6 +113,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Bara Imambara",
+    image: "/images/real/heritage/bara-imambara.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Bara_Imambara_Lucknow.jpg",
     state: "Uttar Pradesh",
     location: "Lucknow",
     designation: "1784",
@@ -102,6 +124,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Ayodhya",
+    image: "/images/real/heritage/ayodhya.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Ram_Janmbhoomi_Mandir,_Ayodhya_Dham.jpg",
     state: "Uttar Pradesh",
     location: "Ayodhya",
     designation: "Living heritage",
@@ -112,6 +136,8 @@ export const heritageSites: HeritageSite[] = [
   // ----------------------------- JHARKHAND -----------------------------
   {
     name: "Maluti Temples",
+    image: "/images/real/heritage/maluti-temples.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Maluti_Temples._Maluti.jpg",
     state: "Jharkhand",
     location: "Dumka district",
     designation: "17th–19th century",
@@ -121,6 +147,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Jonha & Hundru Falls",
+    image: "/images/real/heritage/jonha-hundru-falls.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Hundru_Falls,_Jharkhand,_India.jpg",
     state: "Jharkhand",
     location: "Ranchi region",
     designation: "Natural heritage",
@@ -130,6 +158,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Sarna Groves & Tribal Heritage",
+    image: "/images/real/heritage/sarna-groves.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Santhal_tribes_dancing_in_BAHA_PARAB_(Sarhul_festival).jpg",
     state: "Jharkhand",
     location: "Chotanagpur plateau",
     designation: "Living heritage",
@@ -139,6 +169,8 @@ export const heritageSites: HeritageSite[] = [
   },
   {
     name: "Parasnath Hill (Shikharji)",
+    image: "/images/real/heritage/parasnath-hill.jpg",
+    attributionUrl: "https://commons.wikimedia.org/wiki/File:Shikharji_Parasnath_Giridih.jpg",
     state: "Jharkhand",
     location: "Giridih district",
     designation: "Jain pilgrimage",

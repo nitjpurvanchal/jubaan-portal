@@ -1,23 +1,23 @@
 // JUBAAN volunteer system — role assignment rules + shared constants.
 //
-// Role assignment is fully transparent and rule-based (no black box):
-//   1. "Cultural Performer" — the member picked any performance skill
-//      (Poetry, Dance, Music, Theatre). Performance is the heart of a
-//      cultural club, so it takes priority over everything else.
-//   2. "Creative" — the member picked any craft skill (Painting,
-//      Photography, Design, Writing, Videography, Social Media,
-//      Decoration & Rangoli). These members power posters, shoots,
-//      stage decor and the club's visual voice.
-//   3. "Volunteer" — the member picked "Organising", OR their prior
-//      experience mentions organising / leading / coordinating work, OR
-//      their "why join" note is 120+ characters (a strong motivation
-//      signal). These members power logistics, hospitality and the
-//      front-of-house of every event.
-//   4. "Member" — everyone else. A full member of the sangha, welcome
-//      to every gathering, and free to apply their talents as they grow.
-//
-// Priority order matters: a dancer who also organises is assigned
-// "Cultural Performer" (rule 1 wins), because stage talent is rarer.
+// Role assignment is fully transparent and rule-based (no black box).
+// When the member chose a track on the Join CTA, the track is honoured
+// first — it is their declared intent:
+//   • "creative" track — stage art forms (Acting/Theatre, Dance,
+//     Singing/Music, Instrumental) → "Cultural Performer"; every other
+//     art form → "Creative".
+//   • "volunteer" track → "Volunteer" (on-ground seva crew).
+//   • "member" track → "Member" (community; interests recorded).
+// Without a track (legacy applications), the skill-based rules apply:
+//   1. "Cultural Performer" — any performance skill (Poetry, Dance, Music,
+//      Theatre). Performance is the heart of a cultural club, so it takes
+//      priority over everything else.
+//   2. "Creative" — any craft skill (Painting, Photography, Design,
+//      Writing, Videography, Social Media, Decoration & Rangoli).
+//   3. "Volunteer" — "Organising" picked, OR prior experience mentions
+//      organising / leading / coordinating, OR the "why join" note is
+//      120+ characters (a strong motivation signal).
+//   4. "Member" — everyone else.
 
 export const VOLUNTEER_SKILLS = [
   "Poetry",
@@ -32,6 +32,48 @@ export const VOLUNTEER_SKILLS = [
   "Social Media",
   "Decoration & Rangoli",
   "Organising",
+] as const;
+
+/** The three paths a member can choose on the Join CTA. */
+export const TRACKS = ["volunteer", "creative", "member"] as const;
+export type TrackName = (typeof TRACKS)[number];
+
+export const TRACK_LABELS: Record<TrackName, string> = {
+  volunteer: "Volunteer",
+  creative: "Creative",
+  member: "Member",
+};
+
+export const TRACK_DESCRIPTIONS: Record<TrackName, string> = {
+  volunteer:
+    "On-ground seva — discipline, logistics, hospitality and the front-of-house of every gathering.",
+  creative:
+    "Stage & craft — act, dance, sing, write poetry, paint and shape how JUBAAN looks and sounds.",
+  member:
+    "Community — belong to every celebration and grow into a specialised role over time.",
+};
+
+/** On-ground seva roles offered on the Volunteer track. */
+export const VOLUNTEER_SEVA_ROLES = [
+  "Discipline & Crowd Management",
+  "Stage & Logistics",
+  "Hospitality & Guest Care",
+  "Registration Desk",
+  "Documentation & Photography",
+  "Outreach & Promotion",
+  "First-aid & Safety",
+] as const;
+
+/** Art forms offered on the Creative track. */
+export const CREATIVE_ARTFORMS = [
+  "Acting / Theatre",
+  "Dance",
+  "Singing / Music",
+  "Poetry / Shayari",
+  "Painting / Rangoli",
+  "Instrumental",
+  "Anchoring",
+  "Content Writing",
 ] as const;
 
 export type RoleName = "Member" | "Volunteer" | "Creative" | "Cultural Performer";
@@ -56,6 +98,13 @@ const CREATIVE_SKILLS = new Set<string>([
   "Decoration & Rangoli",
 ]);
 
+// Stage art forms inside the Creative track — these put a member on stage.
+const CREATIVE_STAGE_ARTFORMS = new Set<string>([
+  "Acting / Theatre",
+  "Dance",
+  "Singing / Music",
+  "Instrumental",
+]);
 // Signals of organising/leadership experience in free text.
 const ORGANISING_RE =
   /\b(organis|organiz|co-?ordinat|manag|led\b|lead(ing|er)?s?\b|volunteer(ed|ing)?|captain|coordinator|head\b|president|secretary|committee|anchored|hosted)\b/i;
@@ -70,9 +119,50 @@ function joinList(items: string[]): string {
 export function assignRole(
   skills: string[],
   priorExperience: string,
-  whyJoin = ""
+  whyJoin = "",
+  track?: TrackName
 ): RoleAssignment {
   const picked = skills.map((s) => s.trim()).filter(Boolean);
+
+  // A chosen track is the member's declared intent — honour it first.
+  if (track === "creative") {
+    const stage = picked.filter((s) => CREATIVE_STAGE_ARTFORMS.has(s));
+    if (stage.length > 0) {
+      return {
+        role: "Cultural Performer",
+        track: "Performance",
+        reason: `Your ${joinList(stage)} ${
+          stage.length === 1 ? "art form" : "art forms"
+        } put you on stage — Cultural Performers bring JUBAAN's festivals to life.`,
+      };
+    }
+    return {
+      role: "Creative",
+      track: "Creativity",
+      reason: `Your ${picked.length > 0 ? joinList(picked) : "chosen art forms"} ${
+        picked.length === 1 ? "shapes" : "shape"
+      } how JUBAAN looks and sounds — Creatives craft our performances, posters, shoots, decor and stories.`,
+    };
+  }
+  if (track === "volunteer") {
+    return {
+      role: "Volunteer",
+      track: "Service",
+      reason: `You chose the seva path${
+        picked.length > 0 ? ` — ${joinList(picked)}` : ""
+      }. Volunteers run the discipline, logistics, hospitality and front-of-house of every JUBAAN gathering.`,
+    };
+  }
+  if (track === "member") {
+    return {
+      role: "Member",
+      track: "Community",
+      reason:
+        "Welcome to the sangha — as a Member you belong to every JUBAAN celebration, and you can grow into a specialised role as your talents bloom.",
+    };
+  }
+
+  // Legacy path: no track chosen — fall back to skill-based rules.
 
   const performance = picked.filter((s) => PERFORMANCE_SKILLS.has(s));
   if (performance.length > 0) {
@@ -150,6 +240,10 @@ export type VolunteerApplication = {
   status: string;
   display_on_site: boolean;
   created_at: string;
+  /** Chosen join track: "volunteer" | "creative" | "member" (null for legacy rows). */
+  track: string | null;
+  /** The track-specific roles/artforms/interests the member picked. */
+  track_roles: string[];
 };
 
 /** Deterministic, human-friendly certificate ID, e.g. JBN-2026-A1B2C3. */

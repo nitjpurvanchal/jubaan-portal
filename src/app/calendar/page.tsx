@@ -18,6 +18,8 @@ type CalEvent = {
   note: string;
   location?: string;
   fromDb?: boolean;
+  image?: string;
+  attributionUrl?: string;
 };
 
 type EventRow = {
@@ -73,6 +75,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalEvent[]>(() =>
     annualEvents.map((e: AnnualEvent, i: number) => ({
       id: `seed-${i}`, title: e.title, date: e.date, flagship: e.flagship, note: e.note,
+      image: e.image, attributionUrl: e.attributionUrl,
     }))
   );
   const [user, setUser] = useState<User | null>(null);
@@ -409,6 +412,30 @@ export default function CalendarPage() {
               </div>
               <h3 className="font-display text-3xl md:text-4xl mb-1.5 pr-10">{active.title}</h3>
               <p className="text-sm text-muted mb-6">📍 {active.location ?? activeDetail.venue}</p>
+
+              {active.image && (
+                <figure className="mb-6">
+                  <img
+                    src={active.image}
+                    alt={active.title}
+                    loading="lazy"
+                    className="w-full aspect-video object-cover rounded-2xl border border-cream/10"
+                  />
+                  {active.attributionUrl && (
+                    <figcaption className="mt-1.5 text-[11px] text-muted text-right">
+                      Photo:{" "}
+                      <a
+                        href={active.attributionUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-gold transition-colors"
+                      >
+                        Wikimedia Commons
+                      </a>
+                    </figcaption>
+                  )}
+                </figure>
+              )}
 
               <div className="space-y-5">
                 <div>

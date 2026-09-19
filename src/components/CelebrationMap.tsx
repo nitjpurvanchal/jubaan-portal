@@ -141,6 +141,15 @@ export default function CelebrationMap() {
         spotMarkers.find((m) => m.id === hovered)?.name ??
         null
       : null;
+  const hoverSub =
+    hovered != null
+      ? sacredMarkers.find((m) => m.slug === hovered)?.tagline ??
+        (() => {
+          const sp = spotMarkers.find((m) => m.id === hovered);
+          return sp ? sp.events.slice(0, 2).join(" · ") : null;
+        })() ??
+        null
+      : null;
   const hoverPos =
     hovered != null
       ? (() => {
@@ -202,17 +211,48 @@ export default function CelebrationMap() {
                 <stop offset="0%" stopColor="#d9a441" stopOpacity="0.10" />
                 <stop offset="100%" stopColor="#d9a441" stopOpacity="0" />
               </radialGradient>
+              <linearGradient id="gangaGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#6fa8c9" stopOpacity="0.25" />
+                <stop offset="50%" stopColor="#a8d4ea" stopOpacity="0.55" />
+                <stop offset="100%" stopColor="#6fa8c9" stopOpacity="0.25" />
+              </linearGradient>
+              <linearGradient id="upLand" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#c9a86a" stopOpacity="0.16" />
+                <stop offset="100%" stopColor="#c9a86a" stopOpacity="0.05" />
+              </linearGradient>
+              <linearGradient id="biharLand" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#d9a441" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="#d9a441" stopOpacity="0.06" />
+              </linearGradient>
+              <linearGradient id="jhLand" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#6fa06f" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="#6fa06f" stopOpacity="0.06" />
+              </linearGradient>
+              <pattern id="terrainDots" width="16" height="16" patternUnits="userSpaceOnUse">
+                <circle cx="3" cy="3" r="1.1" fill="rgba(247,240,221,0.055)" />
+              </pattern>
               <filter id="markerGlow" x="-80%" y="-80%" width="260%" height="260%">
                 <feGaussianBlur stdDeviation="5" result="b" />
                 <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
               </filter>
+              <filter id="stateShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="#000000" floodOpacity="0.5" />
+              </filter>
             </defs>
 
             <rect x="0" y="0" width={W} height={H} fill="url(#mapGlow)" rx="18" />
-            <polygon points={poly(UP_SHAPE)} fill="rgba(111,160,111,0.06)" stroke="rgba(247,240,221,0.10)" strokeWidth="1.5" />
-            <polygon points={poly(BIHAR_SHAPE)} fill="rgba(217,164,65,0.07)" stroke="rgba(247,240,221,0.10)" strokeWidth="1.5" />
-            <polygon points={poly(JHARKHAND_SHAPE)} fill="rgba(221,122,45,0.07)" stroke="rgba(247,240,221,0.10)" strokeWidth="1.5" />
-            <path d={gangaD} fill="none" stroke="#6fa8c9" strokeOpacity="0.28" strokeWidth="2.5" strokeLinecap="round" />
+            {/* richer terrain: gradient land + etched texture + lifted shadow */}
+            <g filter="url(#stateShadow)">
+              <polygon points={poly(UP_SHAPE)} fill="url(#upLand)" stroke="rgba(233,196,110,0.4)" strokeWidth="2" strokeLinejoin="round" />
+              <polygon points={poly(BIHAR_SHAPE)} fill="url(#biharLand)" stroke="rgba(233,196,110,0.45)" strokeWidth="2" strokeLinejoin="round" />
+              <polygon points={poly(JHARKHAND_SHAPE)} fill="url(#jhLand)" stroke="rgba(233,196,110,0.4)" strokeWidth="2" strokeLinejoin="round" />
+            </g>
+            <polygon points={poly(UP_SHAPE)} fill="url(#terrainDots)" />
+            <polygon points={poly(BIHAR_SHAPE)} fill="url(#terrainDots)" />
+            <polygon points={poly(JHARKHAND_SHAPE)} fill="url(#terrainDots)" />
+            {/* Ganga: soft wide wash under a bright thread */}
+            <path d={gangaD} fill="none" stroke="#6fa8c9" strokeOpacity="0.14" strokeWidth="9" strokeLinecap="round" />
+            <path d={gangaD} fill="none" stroke="url(#gangaGrad)" strokeWidth="2.5" strokeLinecap="round" />
 
             {(() => {
               const [nx, ny] = project(83.6, 28.22);
@@ -228,6 +268,13 @@ export default function CelebrationMap() {
                 </g>
               );
             })()}
+
+            {/* compass rose */}
+            <g transform={`translate(${W - 46},52)`} opacity={0.75}>
+              <circle r={21} fill="rgba(10,10,10,0.45)" stroke="rgba(233,196,110,0.45)" strokeWidth={1.2} />
+              <path d="M0,-13 L5,4 L0,1 L-5,4 Z" fill="#e9c46e" />
+              <text y={-26} textAnchor="middle" fill="#e9c46e" fontSize={11} fontWeight={700} fontFamily="Inter, sans-serif">N</text>
+            </g>
 
             {/* circuit route */}
             {showSacred && (
@@ -254,6 +301,7 @@ export default function CelebrationMap() {
               ? sacredMarkers.map((m, i) => {
                   const cfg = SACRED_LABELS[m.slug] ?? { dx: 11, dy: 4, anchor: "start" as const };
                   const isSel = selected?.kind === "sacred" && selected.slug === m.slug;
+                  const order = ROUTE_ORDER.indexOf(m.slug) + 1;
                   return (
                     <g key={m.slug} transform={`translate(${m.x},${m.y})`}
                       className="cursor-pointer"
@@ -262,7 +310,7 @@ export default function CelebrationMap() {
                       onClick={() => setSelected(isSel ? null : { kind: "sacred", slug: m.slug })}
                       style={{ transformBox: "fill-box", transformOrigin: "center" }}>
                       {!reduce && (
-                        <circle r={isSel ? 20 : 13} fill="none" stroke="#d9a441" strokeOpacity="0.5" className="animate-glow-pulse" />
+                        <circle r={isSel ? 22 : 14} fill="none" stroke="#d9a441" strokeOpacity="0.5" className="animate-glow-pulse" />
                       )}
                       <motion.circle
                         r={isSel ? 8 : 6}
@@ -272,7 +320,12 @@ export default function CelebrationMap() {
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.15 + i * 0.12, type: "spring", stiffness: 300, damping: 18 }}
                       />
-                      <text x={cfg.dx} y={cfg.dy} textAnchor={cfg.anchor} fill={isSel ? "#eac46e" : "rgba(247,240,221,0.75)"}
+                      {/* circuit order badge */}
+                      <circle cx={11} cy={-11} r={8} fill="#141210" stroke="#e9c46e" strokeWidth={1.4} />
+                      <text x={11} y={-7.5} textAnchor="middle" fill="#e9c46e" fontSize={9.5} fontWeight={700} fontFamily="Inter, sans-serif">
+                        {order}
+                      </text>
+                      <text x={cfg.dx} y={cfg.dy} textAnchor={cfg.anchor} fill={isSel ? "#eac46e" : "rgba(247,240,221,0.78)"}
                         fontSize="12" fontWeight={isSel ? 700 : 500} fontFamily="Inter, sans-serif">
                         {m.name}
                       </text>
@@ -290,17 +343,23 @@ export default function CelebrationMap() {
                       onClick={() => setSelected(isSel ? null : { kind: "celebration", id: m.id })}
                       style={{ transformBox: "fill-box", transformOrigin: "center" }}>
                       {!reduce && (
-                        <circle r={isSel ? 20 : 13} fill="none" stroke="#dd7a2d" strokeOpacity="0.5" className="animate-glow-pulse" />
+                        <circle r={isSel ? 22 : 14} fill="none" stroke="#dd7a2d" strokeOpacity="0.5" className="animate-glow-pulse" />
                       )}
-                      <motion.circle
-                        r={isSel ? 8 : 6}
-                        fill="#dd7a2d"
+                      <motion.g
                         filter="url(#markerGlow)"
                         initial={reduce ? undefined : { scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.1 + i * 0.1, type: "spring", stiffness: 300, damping: 18 }}
-                      />
-                      <text x={cfg.dx} y={cfg.dy} textAnchor={cfg.anchor} fill={isSel ? "#eac46e" : "rgba(247,240,221,0.75)"}
+                        style={{ transformBox: "fill-box", transformOrigin: "center" }}
+                      >
+                        <path
+                          d={isSel ? "M0,-11 L11,0 L0,11 L-11,0 Z" : "M0,-8 L8,0 L0,8 L-8,0 Z"}
+                          fill="#dd7a2d"
+                          stroke="#f4b06a"
+                          strokeWidth={1.2}
+                        />
+                      </motion.g>
+                      <text x={cfg.dx} y={cfg.dy} textAnchor={cfg.anchor} fill={isSel ? "#f4b06a" : "rgba(247,240,221,0.78)"}
                         fontSize="12" fontWeight={isSel ? 700 : 500} fontFamily="Inter, sans-serif">
                         {m.name}
                       </text>
@@ -318,14 +377,17 @@ export default function CelebrationMap() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="absolute pointer-events-none z-10 px-3 py-1.5 rounded-full bg-ink/95 border border-gold/40 text-xs font-semibold text-goldsoft whitespace-nowrap shadow-xl"
+                className="absolute pointer-events-none z-10 px-4 py-2.5 rounded-2xl bg-ink/95 border border-gold/40 shadow-xl max-w-[240px]"
                 style={{
                   left: `${(hoverPos.x / W) * 100}%`,
                   top: `${(hoverPos.y / H) * 100}%`,
-                  transform: "translate(-50%, -160%)",
+                  transform: "translate(-50%, -115%)",
                 }}
               >
-                {hoverLabel}
+                <p className="text-sm font-bold text-goldsoft leading-tight">{hoverLabel}</p>
+                {hoverSub && (
+                  <p className="text-[11px] text-cream/60 italic leading-snug mt-0.5 line-clamp-2">{hoverSub}</p>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -338,25 +400,27 @@ export default function CelebrationMap() {
               <motion.div key={`s-${selectedSacred.slug}`}
                 initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.3 }}>
+                <div className="h-1 w-16 rounded-full bg-gradient-to-r from-gold to-goldsoft mb-5" />
                 <p className="text-[11px] tracking-[0.3em] uppercase text-gold mb-2">{selectedSacred.state} · Sacred site</p>
                 <h3 className="font-display text-3xl mb-1">{selectedSacred.name}</h3>
                 <p className="text-goldsoft italic font-display mb-4">{selectedSacred.tagline}</p>
                 <p className="text-sm text-cream/65 leading-relaxed mb-4">{selectedSacred.description}</p>
-                <ul className="space-y-1.5 mb-4">
+                <ul className="space-y-1.5 mb-5">
                   {selectedSacred.significance.map((pt) => (
                     <li key={pt} className="text-xs text-cream/60 flex gap-2">
                       <span className="text-gold">✦</span><span>{pt}</span>
                     </li>
                   ))}
                 </ul>
-                <p className="text-[11px] tracking-[0.2em] uppercase text-muted">
-                  Best time · <span className="text-goldsoft">{selectedSacred.bestTime}</span>
-                </p>
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/30 bg-gold/10 text-[11px] tracking-[0.18em] uppercase text-goldsoft">
+                  Best time · {selectedSacred.bestTime}
+                </span>
               </motion.div>
             ) : selectedSpot ? (
               <motion.div key={`c-${selectedSpot.id}`}
                 initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.3 }}>
+                <div className="h-1 w-16 rounded-full bg-gradient-to-r from-saffron to-gold mb-5" />
                 <p className="text-[11px] tracking-[0.3em] uppercase text-saffron mb-2">Celebration · {selectedSpot.name}</p>
                 <h3 className="font-display text-3xl mb-3">{selectedSpot.events.join(" · ")}</h3>
                 <p className="text-sm text-cream/65 leading-relaxed mb-4">{selectedSpot.note}</p>

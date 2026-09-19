@@ -5,6 +5,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PageLoader from "@/components/PageLoader";
+import { AuthProvider } from "@/components/AuthProvider";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -48,9 +49,11 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <PageLoader />
         </Suspense>
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <AuthProvider>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -83,6 +83,25 @@ export default function HeritagePage() {
                 transition={{ duration: 0.5, delay: Math.min(i * 0.05, 0.35), ease: [0.22, 1, 0.36, 1] }}
                 className="group rounded-3xl border border-gold/15 bg-coal/70 p-6 md:p-7 hover:border-gold/40 hover:-translate-y-1 transition-all duration-500 flex flex-col"
               >
+                <div className="-mx-6 -mt-6 md:-mx-7 md:-mt-7 mb-4 overflow-hidden rounded-t-3xl">
+                  <img
+                    src={site.image}
+                    alt={site.name}
+                    loading="lazy"
+                    className="w-full aspect-video object-cover"
+                  />
+                </div>
+                <p className="text-[11px] text-muted mb-4">
+                  Photo:{" "}
+                  <a
+                    href={site.attributionUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2 hover:text-gold transition-colors"
+                  >
+                    Wikimedia Commons
+                  </a>
+                </p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   <span className="text-[10px] tracking-[0.25em] uppercase font-semibold px-3 py-1.5 rounded-full bg-ink/70 border border-gold/30 text-gold">
                     {site.state}

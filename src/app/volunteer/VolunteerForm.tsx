@@ -5,44 +5,86 @@ import Link from "next/link";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { VOLUNTEER_SKILLS, assignRole } from "@/lib/volunteer";
-import type { RoleAssignment } from "@/lib/volunteer";
+import {
+  VOLUNTEER_SKILLS,
+  VOLUNTEER_SEVA_ROLES,
+  CREATIVE_ARTFORMS,
+  TRACKS,
+  TRACK_LABELS,
+  assignRole,
+} from "@/lib/volunteer";
+import type { RoleAssignment, TrackName } from "@/lib/volunteer";
 
 type Props = {
   defaultName: string;
   defaultPhone: string;
+  defaultTrack: TrackName;
 };
 
-const STEPS = ["About you", "Your skills", "Experience", "Review"] as const;
+const STEPS = ["About you", "Your path", "Experience", "Review"] as const;
 
-export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
+const TRACK_OPTIONS: Record<TrackName, readonly string[]> = {
+  volunteer: VOLUNTEER_SEVA_ROLES,
+  creative: CREATIVE_ARTFORMS,
+  member: VOLUNTEER_SKILLS,
+};
+
+const TRACK_STEP_COPY: Record<TrackName, { title: string; hint: string }> = {
+  volunteer: {
+    title: "Which seva roles call to you?",
+    hint: "Pick every on-ground role you would happily take up at a JUBAAN gathering.",
+  },
+  creative: {
+    title: "Which art forms are yours?",
+    hint: "Stage art forms (acting, dance, singing) lead to the Cultural Performer role.",
+  },
+  member: {
+    title: "What are your interests?",
+    hint: "Tell us what you love — members belong to every celebration.",
+  },
+};
+
+const TRACK_ACCENT: Record<TrackName, string> = {
+  volunteer: "border-bodhi/60 bg-bodhi/10 text-bodhi",
+  creative: "border-saffron/60 bg-saffron/10 text-saffron",
+  member: "border-gold/60 bg-gold/10 text-goldsoft",
+};
+
+export default function VolunteerForm({ defaultName, defaultPhone, defaultTrack }: Props) {
   const reduce = useReducedMotion();
   const [step, setStep] = useState(0);
+  const [track, setTrack] = useState<TrackName>(defaultTrack);
   const [name, setName] = useState(defaultName);
   const [phone, setPhone] = useState(defaultPhone);
   const [portfolio, setPortfolio] = useState("");
-  const [skills, setSkills] = useState<string[]>([]);
+  const [trackRoles, setTrackRoles] = useState<string[]>([]);
   const [experience, setExperience] = useState("");
   const [why, setWhy] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<RoleAssignment | null>(null);
 
-  const toggleSkill = (s: string) =>
-    setSkills((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
+  const switchTrack = (t: TrackName) => {
+    setTrack(t);
+    setTrackRoles([]);
+    setError(null);
+  };
+
+  const toggleRole = (r: string) =>
+    setTrackRoles((p) => (p.includes(r) ? p.filter((x) => x !== r) : [...p, r]));
 
   const canContinue = (): boolean => {
     if (step === 0) return name.trim().length >= 2 && phone.replace(/\D/g, "").length >= 10;
-    if (step === 1) return skills.length > 0;
+    if (step === 1) return trackRoles.length > 0;
     if (step === 2) return experience.trim().length >= 10 && why.trim().length >= 30;
     return true;
   };
 
   const hints: Record<number, string> = {
-    0: "Tell us who you are.",
-    1: "Pick everything that applies — this decides your role.",
+    0: "Your profile is preloaded — confirm it.",
+    1: "This decides your role in the sangha.",
     2: "No experience yet? Write that honestly — eagerness counts.",
-    3: "Check everything, then join the crew.",
+    3: "Check everything, then join.",
   };
 
   const submit = async () => {
@@ -54,14 +96,16 @@ export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Please sign in first.");
 
-      const assignment = assignRole(skills, experience, why);
+      const assignment = assignRole(trackRoles, experience, why, track);
 
       const { error: dbError } = await supabase.from("volunteer_applications").insert({
         user_id: user.id,
         full_name: name.trim(),
         phone: phone.trim(),
         prior_experience: experience.trim(),
-        skills,
+        skills: trackRoles,
+        track_roles: trackRoles,
+        track,
         why_join: why.trim(),
         portfolio_url: portfolio.trim() || null,
         assigned_role: assignment.role,
@@ -119,6 +163,8 @@ export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
     );
   }
 
+  const stepCopy = TRACK_STEP_COPY[track];
+
   return (
     <div className="rounded-3xl border border-cream/10 bg-coal/60 overflow-hidden">
       {/* progress */}
@@ -141,7 +187,7 @@ export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
       <div className="px-7 md:px-10 py-8 min-h-[340px]">
         <AnimatePresence mode="wait">
           <motion.div
-            key={step}
+            key={`${step}-${track}`}
             initial={reduce ? false : { opacity: 0, x: 32 }}
             animate={{ opacity: 1, x: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, x: -32 }}
@@ -151,7 +197,7 @@ export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
               <div className="space-y-5">
                 <div>
                   <label htmlFor="v-name" className="block text-sm font-semibold text-cream/80 mb-2">
-                    Full name
+                    Full name <span className="text-muted font-normal">(from your profile)</span>
                   </label>
                   <input
                     id="v-name"
@@ -192,18 +238,34 @@ export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
 
             {step === 1 && (
               <div>
-                <p className="text-cream/70 mb-5 text-sm leading-relaxed">
-                  What can you bring to JUBAAN? Select all that fit — performers take the stage,
-                  creatives shape our look, organisers run the show.
-                </p>
+                <div className="flex flex-wrap gap-2.5 mb-6" role="tablist" aria-label="Choose your path">
+                  {TRACKS.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      role="tab"
+                      aria-selected={track === t}
+                      onClick={() => switchTrack(t)}
+                      className={`px-5 py-2.5 rounded-full border text-sm font-bold transition-all duration-200 ${
+                        track === t
+                          ? TRACK_ACCENT[t] + " shadow-[0_0_18px_rgba(217,164,65,0.25)]"
+                          : "border-cream/20 text-cream/55 hover:border-gold/50 hover:text-cream"
+                      }`}
+                    >
+                      {TRACK_LABELS[t]}
+                    </button>
+                  ))}
+                </div>
+                <h3 className="font-display text-2xl mb-2">{stepCopy.title}</h3>
+                <p className="text-cream/60 mb-5 text-sm leading-relaxed">{stepCopy.hint}</p>
                 <div className="flex flex-wrap gap-3">
-                  {VOLUNTEER_SKILLS.map((s) => {
-                    const active = skills.includes(s);
+                  {TRACK_OPTIONS[track].map((r) => {
+                    const active = trackRoles.includes(r);
                     return (
                       <button
-                        key={s}
+                        key={r}
                         type="button"
-                        onClick={() => toggleSkill(s)}
+                        onClick={() => toggleRole(r)}
                         aria-pressed={active}
                         className={`px-5 py-2.5 rounded-full border text-sm font-medium transition-all duration-200 ${
                           active
@@ -211,7 +273,7 @@ export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
                             : "border-cream/20 text-cream/60 hover:border-gold/50 hover:text-cream"
                         }`}
                       >
-                        {active ? "✓ " : ""}{s}
+                        {active ? "✓ " : ""}{r}
                       </button>
                     );
                   })}
@@ -230,7 +292,7 @@ export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
                     value={experience}
                     onChange={(e) => setExperience(e.target.value)}
                     rows={4}
-                    placeholder="e.g. Performed folk dance at my school annual day; helped organise a college fest; managed my society's Instagram…"
+                    placeholder="e.g. Managed the registration desk at my school fest; performed folk dance; led my society's outreach…"
                     className="w-full rounded-2xl bg-ink/60 border border-cream/15 focus:border-gold px-5 py-3.5 text-cream placeholder:text-cream/30 outline-none transition-colors resize-y"
                   />
                 </div>
@@ -256,6 +318,14 @@ export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
                 <p className="text-cream/70 mb-5 text-sm">Your application, as the crew will see it:</p>
                 <dl className="rounded-2xl border border-cream/10 bg-ink/50 p-6 space-y-4 text-sm">
                   <div className="flex justify-between gap-4">
+                    <dt className="text-muted">Path</dt>
+                    <dd>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${TRACK_ACCENT[track]}`}>
+                        {TRACK_LABELS[track]}
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
                     <dt className="text-muted">Name</dt>
                     <dd className="text-cream font-semibold text-right">{name}</dd>
                   </div>
@@ -270,11 +340,13 @@ export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
                     </div>
                   )}
                   <div>
-                    <dt className="text-muted mb-2">Skills</dt>
+                    <dt className="text-muted mb-2">
+                      {track === "volunteer" ? "Seva roles" : track === "creative" ? "Art forms" : "Interests"}
+                    </dt>
                     <dd className="flex flex-wrap gap-2">
-                      {skills.map((s) => (
-                        <span key={s} className="px-3 py-1 rounded-full text-xs border border-gold/40 text-goldsoft bg-gold/10">
-                          {s}
+                      {trackRoles.map((r) => (
+                        <span key={r} className="px-3 py-1 rounded-full text-xs border border-gold/40 text-goldsoft bg-gold/10">
+                          {r}
                         </span>
                       ))}
                     </dd>
@@ -289,11 +361,10 @@ export default function VolunteerForm({ defaultName, defaultPhone }: Props) {
                   </div>
                 </dl>
                 <p className="text-xs text-muted mt-4 leading-relaxed">
-                  Your role is assigned instantly and transparently: performance skills →{" "}
-                  <span className="text-goldsoft">Cultural Performer</span>; craft skills →{" "}
-                  <span className="text-goldsoft">Creative</span>; organising experience or strong
-                  motivation → <span className="text-goldsoft">Volunteer</span>; otherwise a valued{" "}
-                  <span className="text-goldsoft">Member</span>.
+                  Your role follows your chosen path: Volunteers join the seva crew; Creatives
+                  with stage art forms become <span className="text-goldsoft">Cultural Performers</span>,
+                  other art forms become <span className="text-goldsoft">Creatives</span>; Members
+                  belong to the <span className="text-goldsoft">community</span>.
                 </p>
               </div>
             )}

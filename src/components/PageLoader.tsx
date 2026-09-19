@@ -4,10 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
-const SCENE_MS = 520; // each sketch scene's screen time
-const MIN_MS = 1500; // minimum loader presence on first load
-const MAX_MS = 2200; // hard cap on first load
-const ROUTE_MS = 950; // loader presence on route transitions
+/*
+ * Pencil-sketch loader. On a visitor's first page view of the browser session
+ * the full choreography plays for ~5.3s (mountains -> Buddha -> Nalanda ->
+ * tribal tree-of-life -> wordmark). Return visits get a shorter 2.3s pass;
+ * in-session route changes get a compact ~1s ring. Tap / Escape skips.
+ */
+const SEEN_KEY = "jubaan-loader-seen";
+const FIRST_SCENE_MS = 1150;
+const FIRST_TOTAL_MS = 5300;
+const RETURN_SCENE_MS = 520;
+const RETURN_TOTAL_MS = 2300;
+const ROUTE_MS = 950;
 
 const STROKE = "#e8d9b8";
 
@@ -25,11 +33,13 @@ function Strokes({
   delay = 0,
   opacity = 0.9,
   width = 2.2,
+  dur = 650,
 }: {
   d: string[];
   delay?: number;
   opacity?: number;
   width?: number;
+  dur?: number;
 }) {
   return (
     <>
@@ -39,7 +49,10 @@ function Strokes({
           d={p}
           pathLength={1}
           className="sketch-stroke"
-          style={{ animationDelay: `${delay + i * 70}ms` }}
+          style={{
+            animationDelay: `${delay + i * 70}ms`,
+            animationDuration: `${dur}ms`,
+          }}
           fill="none"
           stroke={STROKE}
           strokeWidth={width}
@@ -108,83 +121,185 @@ function SceneHimalaya() {
   );
 }
 
+/**
+ * The Buddha in serene profile, facing left — traced from classical
+ * iconography: ushnisha crown, snail-shell curls, long arched brow,
+ * downcast closed eye, straight nose, calm lips, elongated earlobe,
+ * and draped monastic robes over the shoulder.
+ */
 function SceneBuddha() {
   return (
     <g>
+      {/* faint halo */}
       <circle
-        cx={205}
-        cy={150}
-        r={88}
+        cx={168}
+        cy={142}
+        r={102}
         pathLength={1}
         className="sketch-stroke"
-        style={{ animationDelay: "60ms" }}
+        style={{ animationDelay: "40ms", animationDuration: "900ms" }}
         fill="none"
         stroke={STROKE}
         strokeWidth={1.6}
-        opacity={0.3}
+        opacity={0.22}
       />
+      {/* head outline: nape -> crown -> ushnisha -> forehead -> nose -> lips -> chin -> jaw -> neck -> shoulder */}
       <Strokes
-        delay={140}
+        delay={90}
+        width={2.6}
+        dur={950}
         d={[
-          "M258,44 C246,62 240,80 237,98 L231,124 C229,132 233,137 240,137 C236,143 238,149 244,151 C239,159 244,169 256,173 C268,178 272,190 269,204 C267,218 250,228 224,232",
+          "M252,300 C240,274 228,254 222,234 C218,220 220,210 228,202 C246,188 254,160 250,130 C247,102 234,80 212,68 C206,60 204,54 202,46 C200,38 192,32 182,32 C172,32 164,38 162,46 C160,54 158,58 152,62 C140,68 130,76 124,88 C120,96 118,102 116,108 C114,114 110,120 106,128 C102,136 96,144 92,150 C90,154 92,158 96,160 C100,162 102,164 102,168 C102,172 100,174 98,176 C96,180 98,184 104,186 C108,188 110,192 112,196 C114,202 120,206 128,208 C142,212 158,214 172,212 C184,210 194,206 200,200 C206,222 202,246 194,264 C186,284 172,296 152,300",
         ]}
       />
+      {/* ushnisha curls + hairline */}
       <Strokes
-        delay={520}
-        opacity={0.7}
-        width={1.8}
-        d={["M240,96 q11,-3 21,2", "M243,108 q9,6 18,1"]}
-      />
-      <Strokes
-        delay={640}
+        delay={560}
         opacity={0.8}
         width={1.8}
         d={[
-          "M266,128 c9,3 10,15 2,21 c-6,4 -14,1 -15,-6",
-          "M258,44 c6,-8 18,-6 20,4",
+          "M170,37 q6,-5 12,0",
+          "M184,35 q6,-5 12,0",
+          "M154,64 q7,-6 13,-1",
+          "M168,57 q7,-6 13,-1",
+          "M141,75 q7,-6 13,-1",
         ]}
       />
-      <circle cx={241} cy={88} r={2.6} fill={STROKE} opacity={0.85} />
+      {/* brow + closed downcast eye */}
+      <Strokes
+        delay={680}
+        width={2.4}
+        d={["M108,113 C121,104 136,102 149,107"]}
+      />
+      <Strokes
+        delay={760}
+        width={2.2}
+        d={["M114,132 C122,136 132,136 140,132", "M116,127 C124,129 132,129 138,127"]}
+      />
+      {/* nostril + lips */}
+      <Strokes
+        delay={830}
+        opacity={0.85}
+        width={1.9}
+        d={["M93,158 q4,2 8,1", "M97,180 C101,182 106,182 110,180"]}
+      />
+      {/* elongated earlobe */}
+      <Strokes
+        delay={900}
+        width={2.4}
+        d={[
+          "M208,116 C217,122 219,136 215,150 C211,164 205,176 198,186 C194,192 187,193 183,188",
+          "M204,132 C208,141 207,154 201,166",
+        ]}
+      />
+      {/* robe folds */}
+      <Strokes
+        delay={980}
+        opacity={0.65}
+        width={2}
+        d={[
+          "M118,300 C138,272 158,254 184,244",
+          "M88,300 C112,268 138,250 166,242",
+        ]}
+      />
     </g>
   );
 }
 
+/**
+ * Nalanda — the great Sariputta Stupa: a massive terraced brick pyramid
+ * with a central stair, ringed by small votive stupas in the foreground.
+ */
 function SceneNalanda() {
   return (
     <g>
-      <Strokes delay={60} d={["M70,232 L330,232"]} />
-      <Strokes delay={140} d={["M86,232 L86,206 L314,206 L314,232"]} />
+      {/* ground */}
+      <Strokes delay={60} d={["M36,254 L364,254"]} />
+      {/* stepped pyramid terraces */}
       <Strokes
-        delay={260}
-        d={["M104,206 A96,78 0 0 1 296,206"]}
+        delay={150}
+        width={2.4}
+        dur={800}
+        d={[
+          "M66,254 L92,198 L308,198 L334,254",
+          "M106,198 L124,156 L276,156 L294,198",
+          "M138,156 L152,120 L248,120 L262,156",
+          "M152,120 L248,120",
+        ]}
       />
+      {/* crowning remnant */}
       <Strokes
-        delay={420}
+        delay={520}
+        opacity={0.85}
+        width={2}
+        d={["M188,120 L192,102 L208,102 L212,120", "M192,102 L208,102"]}
+      />
+      {/* central stair */}
+      <Strokes
+        delay={620}
         opacity={0.75}
         width={1.8}
         d={[
-          "M186,118 L214,118 L214,134 L186,134 Z",
-          "M200,118 L200,58",
-          "M182,72 L218,72",
-          "M188,86 L212,86",
-          "M193,100 L207,100",
+          "M190,254 L195,120",
+          "M210,254 L205,120",
+          "M190,230 L210,230",
+          "M191,206 L209,206",
+          "M192,182 L208,182",
+          "M193,158 L207,158",
+          "M194,138 L206,138",
         ]}
       />
+      {/* brick-course ticks on the lowest terrace */}
       <Strokes
-        delay={560}
+        delay={760}
+        opacity={0.4}
+        width={1.6}
+        d={[
+          "M132,198 L132,214",
+          "M172,198 L172,214",
+          "M228,198 L228,214",
+          "M268,198 L268,214",
+        ]}
+      />
+      {/* votive stupa, left foreground */}
+      <Strokes
+        delay={820}
+        opacity={0.85}
+        width={2}
+        d={[
+          "M40,254 L40,240 L74,240 L74,254",
+          "M40,240 A17,17 0 0 1 74,240",
+          "M57,223 L57,212",
+          "M51,216 L63,216",
+        ]}
+      />
+      {/* votive stupa, right foreground */}
+      <Strokes
+        delay={900}
+        opacity={0.85}
+        width={2}
+        d={[
+          "M308,254 L308,242 L344,242 L344,254",
+          "M308,242 A18,18 0 0 1 344,242",
+          "M326,224 L326,214",
+        ]}
+      />
+      {/* small votive stupa, centre foreground */}
+      <Strokes
+        delay={960}
         opacity={0.7}
         width={1.8}
         d={[
-          "M128,206 L128,182 A14,14 0 0 1 156,182 L156,206",
-          "M186,206 L186,182 A14,14 0 0 1 214,182 L214,206",
-          "M244,206 L244,182 A14,14 0 0 1 272,182 L272,206",
+          "M148,264 L148,252 L182,252 L182,264",
+          "M148,252 A17,17 0 0 1 182,252",
         ]}
       />
+      {/* birds */}
       <Strokes
-        delay={700}
-        opacity={0.4}
-        width={1.8}
-        d={["M150,250 L250,250", "M165,262 L235,262"]}
+        delay={1020}
+        opacity={0.45}
+        width={1.6}
+        d={["M62,62 q6,-6 12,0 q6,-6 12,0", "M300,48 q5,-5 10,0 q5,-5 10,0"]}
       />
     </g>
   );
@@ -254,33 +369,40 @@ export default function PageLoader() {
     setVisible(false);
   }, []);
 
-  /* initial page load: full sketch choreography */
+  /* initial page load: full sketch choreography.
+     First view of the browser session gets the complete ~5.3s sequence;
+     later full loads in the same session get a shorter 2.3s pass. */
   useEffect(() => {
     if (reduce) {
       dismissed.current = true;
       const t = window.setTimeout(() => setVisible(false), 0);
       return () => window.clearTimeout(t);
     }
+    let seen = false;
+    try {
+      seen = window.sessionStorage.getItem(SEEN_KEY) === "1";
+    } catch {
+      /* storage unavailable — treat as first visit */
+    }
+    const sceneMs = seen ? RETURN_SCENE_MS : FIRST_SCENE_MS;
+    const totalMs = seen ? RETURN_TOTAL_MS : FIRST_TOTAL_MS;
+
     const timers: number[] = [];
-    const start = Date.now();
     for (let i = 1; i < SCENES.length; i++) {
-      timers.push(window.setTimeout(() => setScene(i), i * SCENE_MS));
+      timers.push(window.setTimeout(() => setScene(i), i * sceneMs));
     }
-    const finish = () => {
-      const elapsed = Date.now() - start;
-      timers.push(
-        window.setTimeout(dismiss, Math.max(0, MIN_MS - elapsed))
-      );
-    };
-    if (document.readyState === "complete") {
-      finish();
-    } else {
-      window.addEventListener("load", finish, { once: true });
-      timers.push(window.setTimeout(dismiss, MAX_MS)); // hard cap
-    }
+    timers.push(
+      window.setTimeout(() => {
+        try {
+          window.sessionStorage.setItem(SEEN_KEY, "1");
+        } catch {
+          /* ignore */
+        }
+        dismiss();
+      }, totalMs)
+    );
     return () => {
       timers.forEach((t) => window.clearTimeout(t));
-      window.removeEventListener("load", finish);
     };
   }, [reduce, dismiss]);
 

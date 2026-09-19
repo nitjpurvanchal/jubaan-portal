@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { useSession } from "@/hooks/useSession";
+import { isAdminEmail } from "@/lib/admin";
 import LogoMark from "@/components/LogoMark";
 
 const links = [
@@ -29,7 +29,9 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [dropOpen, setDropOpen] = useState(false);
-  const [user, setUser] = useState<{ email?: string } | null>(null);
+  // Single source of truth: the shared auth session. Updates instantly on
+  // sign-in/sign-out anywhere in the app — no reload, no stale "Join".
+  const { user, loading: sessionLoading, signOut: providerSignOut } = useSession();
   const dropTimer = useRef<number | null>(null);
   const [prevPath, setPrevPath] = useState(pathname);
 
@@ -48,16 +50,6 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) return;
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
-      setUser(session?.user ?? null)
-    );
-    return () => sub.subscription.unsubscribe();
-  }, [pathname]);
-
-  useEffect(() => {
     return () => {
       if (dropTimer.current) window.clearTimeout(dropTimer.current);
     };
@@ -73,19 +65,24 @@ export default function Navbar() {
   };
 
   const signOut = async () => {
-    if (!isSupabaseConfigured()) return;
-    await createClient().auth.signOut();
-    setUser(null);
+    await providerSignOut();
     setOpen(false);
     router.push("/");
     router.refresh();
   };
+
+  const userInitial =
+    (user?.user_metadata?.full_name as string | undefined)?.trim()?.[0] ??
+    user?.email?.[0]?.toUpperCase() ??
+    "J";
+  const isAdmin = isAdminEmail(user?.email);
 
   const inDiscover = discover.some((d) => pathname === d.href);
   const mobileLinks = [
     ...links,
     ...discover,
     ...(user ? [{ href: "/dashboard", label: "Dashboard" }] : []),
+    ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
   ];
 
   return (
@@ -207,7 +204,12 @@ export default function Navbar() {
             )}
           </Link>
 
-          {user ? (
+          {sessionLoading ? (
+            <span
+              className="ml-2 inline-block w-28 h-10 rounded-full bg-cream/10 animate-pulse"
+              aria-hidden="true"
+            />
+          ) : user ? (
             <>
               <Link
                 href="/dashboard"
@@ -217,9 +219,26 @@ export default function Navbar() {
               >
                 Dashboard
               </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className={`px-3.5 py-2 text-sm tracking-wide transition-colors ${
+                    pathname === "/admin" ? "text-gold" : "text-cream/70 hover:text-cream"
+                  }`}
+                >
+                  Admin
+                </Link>
+              )}
+              <span
+                className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gold to-saffron font-display text-sm font-bold text-ink shadow-[0_0_16px_rgba(217,164,65,0.4)]"
+                title={user.email ?? "Signed in"}
+                aria-label={`Signed in as ${user.email ?? "member"}`}
+              >
+                {userInitial}
+              </span>
               <button
                 onClick={signOut}
-                className="ml-2 px-5 py-2.5 text-sm rounded-full border border-gold/40 text-gold hover:bg-gold hover:text-ink transition-all duration-300 active:scale-95"
+                className="ml-1 px-5 py-2.5 text-sm rounded-full border border-gold/40 text-gold hover:bg-gold hover:text-ink transition-all duration-300 active:scale-95"
               >
                 Sign out
               </button>
@@ -281,9 +300,11 @@ export default function Navbar() {
                   </Link>
                 </motion.div>
               ))}
-              {user ? (
+              {sessionLoading ? (
+                <span className="mt-3 mb-2 block h-12 rounded-full bg-cream/10 animate-pulse" aria-hidden="true" />
+              ) : user ? (
                 <button onClick={signOut} className="py-3 text-left text-base text-saffron">
-                  Sign out
+                  Sign out ({user.email})
                 </button>
               ) : (
                 <Link

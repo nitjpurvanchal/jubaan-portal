@@ -1,11 +1,29 @@
+import { redirect } from "next/navigation";
 import Image from "next/image";
 import AuthForm from "@/components/AuthForm";
 import EmberCanvas from "@/components/EmberCanvas";
 import BodhiLeaf from "@/components/BodhiLeaf";
+import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured, safeNextPath } from "@/lib/supabase/config";
 
 export const metadata = { title: "Sign in — JUBAAN" };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  // Already signed in? Don't show the form again — go where they were headed.
+  if (isSupabaseConfigured()) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { next } = await searchParams;
+      redirect(safeNextPath(next) ?? "/dashboard");
+    }
+  }
+  const { next } = await searchParams;
+  const nextPath = safeNextPath(next);
   return (
     <div className="pt-[72px] min-h-[100svh] flex relative overflow-hidden">
       {/* art panel */}
@@ -64,7 +82,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="glass rounded-[2rem] p-8 md:p-10 shadow-[0_30px_90px_rgba(0,0,0,0.6)]">
-            <AuthForm mode="login" />
+            <AuthForm mode="login" next={nextPath} />
           </div>
           <p className="text-center text-xs text-muted mt-6 tracking-wide">
             Protected by the Bodhi tree · NIT Jalandhar

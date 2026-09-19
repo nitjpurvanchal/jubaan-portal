@@ -94,8 +94,8 @@ export const legends: Legend[] = [
     lifespan: "1887 – 1961",
     image: "/images/legends/govind-ballabh-pant.jpg",
     attributionUrl:
-      "https://commons.wikimedia.org/wiki/File:Govind_Ballabh_Pant_1965_stamp_of_India.jpg",
-    credit: "India Post stamp, via Wikimedia Commons",
+      "https://commons.wikimedia.org/wiki/File:Pandit_Govind_Ballabh_Pant.jpg",
+    credit: "Wikimedia Commons",
     bio: "Born in the hills of present-day Uttarakhand, then part of the United Provinces, Pant became the first Chief Minister of Uttar Pradesh and later the Union Home Minister. A freedom fighter of formidable administrative gifts, he helped knit the new republic together. Bharat Ratna, 1957.",
   },
   {

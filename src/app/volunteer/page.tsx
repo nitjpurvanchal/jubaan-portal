@@ -9,7 +9,8 @@ import VolunteerCertificate from "@/components/VolunteerCertificate";
 import { certificateId } from "@/lib/volunteer";
 import type { RoleName } from "@/lib/volunteer";
 import type { VolunteerApplication } from "@/lib/volunteer";
-import { ROLE_BADGE_STYLES } from "@/lib/volunteer";
+import { ROLE_BADGE_STYLES, TRACKS, TRACK_LABELS, TRACK_DESCRIPTIONS } from "@/lib/volunteer";
+import type { TrackName } from "@/lib/volunteer";
 
 export const metadata = { title: "Become a Volunteer — JUBAAN" };
 
@@ -21,7 +22,11 @@ function formatDate(iso: string): string {
   });
 }
 
-export default async function VolunteerPage() {
+export default async function VolunteerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ track?: string }>;
+}) {
   if (!isSupabaseConfigured()) {
     return (
       <div className="pt-[72px] min-h-[80svh] flex items-center justify-center px-5">
@@ -59,12 +64,17 @@ export default async function VolunteerPage() {
   const application = (appData ?? null) as VolunteerApplication | null;
   const profile = profileData as { full_name: string | null; phone: string | null } | null;
 
+  const { track: trackParam } = await searchParams;
+  const initialTrack: TrackName = (TRACKS as readonly string[]).includes(trackParam ?? "")
+    ? (trackParam as TrackName)
+    : "volunteer";
+
   return (
     <div className="pt-[72px]">
       <section className="max-w-3xl mx-auto px-5 md:px-8 pt-14 pb-24">
         <Reveal className="text-center mb-10">
           <p className="text-gold tracking-[0.35em] uppercase text-xs font-semibold mb-3">
-            {application ? "Your crew pass" : "Join the crew"}
+            {application ? "Your crew pass" : `Join as a ${TRACK_LABELS[initialTrack]}`}
           </p>
           <h1 className="font-display text-4xl md:text-5xl mb-4">
             {application ? (
@@ -76,7 +86,7 @@ export default async function VolunteerPage() {
           <p className="text-cream/65 max-w-xl mx-auto leading-relaxed">
             {application
               ? "Here is your standing in the JUBAAN crew — your certificate is yours to keep, print and share."
-              : "Tell us your talents and we will find your place — on stage, behind the lens, or running the show. Your role is assigned instantly and transparently."}
+              : TRACK_DESCRIPTIONS[initialTrack]}
           </p>
         </Reveal>
 
@@ -124,6 +134,7 @@ export default async function VolunteerPage() {
             <VolunteerForm
               defaultName={profile?.full_name ?? ""}
               defaultPhone={profile?.phone ?? ""}
+              defaultTrack={initialTrack}
             />
           </Reveal>
         )}
