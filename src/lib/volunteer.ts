@@ -252,3 +252,34 @@ export function certificateId(app: Pick<VolunteerApplication, "id" | "created_at
   const code = app.id.replace(/-/g, "").slice(0, 6).toUpperCase();
   return `JBN-${year}-${code}`;
 }
+
+/**
+ * Find the member's application for a given join track. Legacy applications
+ * (null track) are matched by their assigned role, so existing single-role
+ * members land in the right slot.
+ */
+export function applicationForTrack(
+  apps: VolunteerApplication[],
+  track: TrackName
+): VolunteerApplication | null {
+  const exact = apps.find((a) => a.track === track);
+  if (exact) return exact;
+  const legacyRoles: Record<TrackName, string[]> = {
+    volunteer: ["Volunteer"],
+    creative: ["Creative", "Cultural Performer"],
+    member: ["Member"],
+  };
+  return (
+    apps.find(
+      (a) =>
+        (a.track == null || a.track === "") && legacyRoles[track].includes(a.assigned_role)
+    ) ?? null
+  );
+}
+
+/** Highest-priority role across a member's applications (Member is the floor). */
+export function primaryRole(apps: Pick<VolunteerApplication, "assigned_role">[]): RoleName {
+  const order: RoleName[] = ["Cultural Performer", "Creative", "Volunteer", "Member"];
+  const have = new Set(apps.map((a) => a.assigned_role));
+  return order.find((r) => have.has(r)) ?? "Member";
+}

@@ -13,12 +13,15 @@ import {
   TRACK_LABELS,
   assignRole,
 } from "@/lib/volunteer";
-import type { RoleAssignment, TrackName } from "@/lib/volunteer";
+import type { RoleAssignment, TrackName, VolunteerApplication } from "@/lib/volunteer";
 
 type Props = {
   defaultName: string;
   defaultPhone: string;
   defaultTrack: TrackName;
+  /** When set, the form runs in EDIT mode: fields are prefilled and the
+   *  existing application is updated in place instead of creating a new one. */
+  existingApp?: VolunteerApplication | null;
 };
 
 const STEPS = ["About you", "Your path", "Experience", "Review"] as const;
@@ -50,21 +53,34 @@ const TRACK_ACCENT: Record<TrackName, string> = {
   member: "border-gold/60 bg-gold/10 text-goldsoft",
 };
 
-export default function VolunteerForm({ defaultName, defaultPhone, defaultTrack }: Props) {
+export default function VolunteerForm({ defaultName, defaultPhone, defaultTrack, existingApp = null }: Props) {
   const reduce = useReducedMotion();
+  const editMode = !!existingApp;
+  // In edit mode the track is locked — the member applies for the other
+  // track separately, so one application never silently becomes another.
+  const lockedTrack: TrackName =
+    editMode && existingApp.track && (TRACKS as readonly string[]).includes(existingApp.track)
+      ? (existingApp.track as TrackName)
+      : defaultTrack;
+
   const [step, setStep] = useState(0);
-  const [track, setTrack] = useState<TrackName>(defaultTrack);
-  const [name, setName] = useState(defaultName);
-  const [phone, setPhone] = useState(defaultPhone);
-  const [portfolio, setPortfolio] = useState("");
-  const [trackRoles, setTrackRoles] = useState<string[]>([]);
-  const [experience, setExperience] = useState("");
-  const [why, setWhy] = useState("");
+  const [track, setTrack] = useState<TrackName>(lockedTrack);
+  const [name, setName] = useState(existingApp?.full_name ?? defaultName);
+  const [phone, setPhone] = useState(existingApp?.phone ?? defaultPhone);
+  const [portfolio, setPortfolio] = useState(existingApp?.portfolio_url ?? "");
+  const [trackRoles, setTrackRoles] = useState<string[]>(
+    existingApp?.track_roles?.length ? existingApp.track_roles
+    : existingApp?.skills?.length ? existingApp.skills
+    : []
+  );
+  const [experience, setExperience] = useState(existingApp?.prior_experience ?? "");
+  const [why, setWhy] = useState(existingApp?.why_join ?? "");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<RoleAssignment | null>(null);
 
   const switchTrack = (t: TrackName) => {
+    if (editMode) return;
     setTrack(t);
     setTrackRoles([]);
     setError(null);
@@ -98,7 +114,7 @@ export default function VolunteerForm({ defaultName, defaultPhone, defaultTrack 
 
       const assignment = assignRole(trackRoles, experience, why, track);
 
-      const { error: dbError } = await supabase.from("volunteer_applications").insert({
+      const payload = {
         user_id: user.id,
         full_name: name.trim(),
         phone: phone.trim(),
@@ -110,15 +126,29 @@ export default function VolunteerForm({ defaultName, defaultPhone, defaultTrack 
         portfolio_url: portfolio.trim() || null,
         assigned_role: assignment.role,
         status: "approved",
-      });
+      };
 
-      if (dbError) {
-        if (dbError.code === "23505") {
-          setError("You have already applied — your role is on your dashboard.");
-        } else {
-          throw new Error(dbError.message);
+      if (editMode && existingApp) {
+        // Update the existing row in place — never a duplicate.
+        const { error: dbError } = await supabase
+          .from("volunteer_applications")
+          .update(payload)
+          .eq("id", existingApp.id);
+        if (dbError) throw new Error(dbError.message);
+      } else {
+        // Upsert on (user_id, track): a member holds at most one
+        // application per track — a race or double-submit updates it.
+        const { error: dbError } = await supabase
+          .from("volunteer_applications")
+          .upsert(payload, { onConflict: "user_id,track" });
+        if (dbError) {
+          if (dbError.code === "23505") {
+            setError("You have already applied — your role is on your dashboard.");
+          } else {
+            throw new Error(dbError.message);
+          }
+          return;
         }
-        return;
       }
       setResult(assignment);
     } catch (e) {
@@ -139,7 +169,7 @@ export default function VolunteerForm({ defaultName, defaultPhone, defaultTrack 
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-gold/15 blur-[80px] rounded-full pointer-events-none" />
         <p className="text-5xl mb-5" aria-hidden="true">🎉</p>
         <p className="text-gold tracking-[0.3em] uppercase text-xs font-semibold mb-3">
-          Welcome to the crew
+          {editMode ? "Application updated" : "Welcome to the crew"}
         </p>
         <h2 className="font-display text-4xl md:text-5xl mb-4">
           You are a <span className="text-gradient-gold">{result.role}</span>
@@ -238,24 +268,33 @@ export default function VolunteerForm({ defaultName, defaultPhone, defaultTrack 
 
             {step === 1 && (
               <div>
-                <div className="flex flex-wrap gap-2.5 mb-6" role="tablist" aria-label="Choose your path">
-                  {TRACKS.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      role="tab"
-                      aria-selected={track === t}
-                      onClick={() => switchTrack(t)}
-                      className={`px-5 py-2.5 rounded-full border text-sm font-bold transition-all duration-200 ${
-                        track === t
-                          ? TRACK_ACCENT[t] + " shadow-[0_0_18px_rgba(217,164,65,0.25)]"
-                          : "border-cream/20 text-cream/55 hover:border-gold/50 hover:text-cream"
-                      }`}
-                    >
-                      {TRACK_LABELS[t]}
-                    </button>
-                  ))}
-                </div>
+                {!editMode && (
+                  <div className="flex flex-wrap gap-2.5 mb-6" role="tablist" aria-label="Choose your path">
+                    {TRACKS.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        role="tab"
+                        aria-selected={track === t}
+                        onClick={() => switchTrack(t)}
+                        className={`px-5 py-2.5 rounded-full border text-sm font-bold transition-all duration-200 ${
+                          track === t
+                            ? TRACK_ACCENT[t] + " shadow-[0_0_18px_rgba(217,164,65,0.25)]"
+                            : "border-cream/20 text-cream/55 hover:border-gold/50 hover:text-cream"
+                        }`}
+                      >
+                        {TRACK_LABELS[t]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {editMode && (
+                  <div className="mb-6">
+                    <span className={`inline-block px-4 py-1.5 rounded-full border text-[11px] font-bold tracking-[0.2em] uppercase ${TRACK_ACCENT[track]}`}>
+                      {TRACK_LABELS[track]} track
+                    </span>
+                  </div>
+                )}
                 <h3 className="font-display text-2xl mb-2">{stepCopy.title}</h3>
                 <p className="text-cream/60 mb-5 text-sm leading-relaxed">{stepCopy.hint}</p>
                 <div className="flex flex-wrap gap-3">
@@ -403,7 +442,7 @@ export default function VolunteerForm({ defaultName, defaultPhone, defaultTrack 
             disabled={submitting}
             className="px-8 py-3 rounded-full bg-gold text-ink font-bold hover:bg-goldsoft transition-all duration-300 disabled:opacity-50 shadow-[0_0_28px_rgba(217,164,65,0.35)]"
           >
-            {submitting ? "Joining…" : "Join the crew ✨"}
+            {submitting ? (editMode ? "Updating…" : "Joining…") : editMode ? "Update application ✓" : "Join the crew ✨"}
           </button>
         )}
       </div>

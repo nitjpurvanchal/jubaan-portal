@@ -21,6 +21,9 @@ export type MemberRow = {
   interests: string[];
   onboarding_completed: boolean | null;
   created_at: string | null;
+  photo_url: string | null;
+  /** Assigned roles from ALL of the member's applications ("Member" when none). */
+  roles: string[];
 };
 
 export type ApplicationRow = {
@@ -49,6 +52,9 @@ export type AttendeeRow = {
   assigned_role: string | null;
   track: string | null;
   rsvpd_at: string | null;
+  photo_url: string | null;
+  /** All assigned roles from the member's applications. */
+  roles: string[];
 };
 
 function ConfigMissing() {
@@ -82,7 +88,7 @@ export default async function AdminPage() {
       supabase
         .from("profiles")
         .select(
-          "id,full_name,email,roll_number,branch,semester,phone,home_state,home_district,interests,onboarding_completed,created_at"
+          "id,full_name,email,roll_number,branch,semester,phone,home_state,home_district,interests,onboarding_completed,created_at,photo_url"
         )
         .order("created_at", { ascending: false }),
       supabase
@@ -106,21 +112,46 @@ export default async function AdminPage() {
     roll_number: byId.get(a.user_id)?.roll_number ?? null,
   }));
 
-  const appByUser = new Map(applicationRows.map((a) => [a.user_id, a]));
+  // Group ALL applications per member — a member can hold a volunteer AND a
+  // creative application at the same time.
+  const appsByUser = new Map<string, ApplicationRow[]>();
+  for (const a of applicationRows) {
+    const list = appsByUser.get(a.user_id);
+    if (list) list.push(a);
+    else appsByUser.set(a.user_id, [a]);
+  }
+
+  const rolesOf = (userId: string): string[] => {
+    const apps = appsByUser.get(userId) ?? [];
+    const roles = Array.from(new Set(apps.map((a) => a.assigned_role ?? "Member")));
+    return roles.length > 0 ? roles : ["Member"];
+  };
+
+  // Role classification for the RSVP list: highest-priority role wins.
+  const classify = (roles: string[]): string => {
+    const order = ["Cultural Performer", "Creative", "Volunteer", "Member"];
+    return order.find((r) => roles.includes(r)) ?? "Member";
+  };
+
+  for (const m of memberRows) {
+    m.roles = rolesOf(m.id);
+  }
   const eventRows = (events ?? []) as EventRow[];
 
   type RsvpRaw = { id: string; event_id: string; user_id: string; created_at: string | null };
   const attendeeRows: AttendeeRow[] = ((rsvps ?? []) as RsvpRaw[]).map((r) => {
     const p = byId.get(r.user_id);
-    const app = appByUser.get(r.user_id);
+    const roles = rolesOf(r.user_id);
     return {
       event_id: r.event_id,
       name: p?.full_name ?? "(unknown member)",
       roll_number: p?.roll_number ?? null,
       phone: p?.phone ?? null,
-      assigned_role: app?.assigned_role ?? "Member",
-      track: app?.track ?? null,
+      assigned_role: classify(roles),
+      track: (appsByUser.get(r.user_id) ?? [])[0]?.track ?? null,
       rsvpd_at: r.created_at,
+      photo_url: p?.photo_url ?? null,
+      roles,
     };
   });
 

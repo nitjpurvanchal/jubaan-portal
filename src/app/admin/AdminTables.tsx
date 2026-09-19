@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import ProfileAvatar from "@/components/ProfileAvatar";
+import { TRACK_LABELS } from "@/lib/volunteer";
+import type { TrackName } from "@/lib/volunteer";
 import type { MemberRow, ApplicationRow, EventRow, AttendeeRow } from "./page";
 
 type Props = {
@@ -85,6 +88,22 @@ function roleTone(role: string | null): "gold" | "green" | "saffron" | "plain" {
     case "volunteer": return "green";
     default: return "plain";
   }
+}
+
+function trackTone(track: string | null): "gold" | "green" | "saffron" | "plain" {
+  switch ((track ?? "").toLowerCase()) {
+    case "volunteer": return "green";
+    case "creative": return "saffron";
+    default: return "plain";
+  }
+}
+
+function trackLabel(track: string | null): string {
+  if (!track) return "";
+  const t = track.toLowerCase();
+  return t === "volunteer" || t === "creative" || t === "member"
+    ? TRACK_LABELS[t as TrackName]
+    : track;
 }
 
 function FilterSelect({
@@ -212,7 +231,8 @@ export default function AdminDashboard({ members, applications, events, attendee
             <ExportButton onClick={() => downloadCsv("jubaan-members.csv", filteredMembers.map((m) => ({
               Name: m.full_name, Roll: m.roll_number, Email: m.email, Branch: m.branch,
               Semester: m.semester, Phone: m.phone, State: m.home_state, District: m.home_district,
-              Interests: (m.interests ?? []).join("; "), Onboarded: m.onboarding_completed ? "yes" : "no",
+              Interests: (m.interests ?? []).join("; "), Roles: (m.roles ?? []).join("; "),
+              Photo: m.photo_url, Onboarded: m.onboarding_completed ? "yes" : "no",
               Joined: formatDate(m.created_at),
             })))} />
           </>
@@ -220,22 +240,38 @@ export default function AdminDashboard({ members, applications, events, attendee
       >
         <TableShell>
           <thead><tr>
-            <th className={th}>Name</th><th className={th}>Roll</th><th className={th}>Branch · Sem</th>
-            <th className={th}>Phone</th><th className={th}>Home</th><th className={th}>Interests</th>
+            <th className={th}>Member</th><th className={th}>Roll</th><th className={th}>Branch · Sem</th>
+            <th className={th}>Phone</th><th className={th}>Home</th><th className={th}>Roles</th>
+            <th className={th}>Interests</th>
           </tr></thead>
           <tbody>
             {filteredMembers.map((m) => (
               <tr key={m.id}>
-                <td className={td}><span className="text-cream font-medium">{m.full_name ?? "—"}</span><br /><span className="text-cream/40 text-xs">{m.email ?? ""}</span></td>
+                <td className={td}>
+                  <div className="flex items-center gap-3">
+                    <ProfileAvatar src={m.photo_url} name={m.full_name} size={36} />
+                    <div>
+                      <span className="text-cream font-medium">{m.full_name ?? "—"}</span>
+                      <br /><span className="text-cream/40 text-xs">{m.email ?? ""}</span>
+                    </div>
+                  </div>
+                </td>
                 <td className={td}>{m.roll_number ?? "—"}</td>
                 <td className={td}>{[m.branch, m.semester ? `Sem ${m.semester}` : null].filter(Boolean).join(" · ") || "—"}</td>
                 <td className={td}>{m.phone ?? "—"}</td>
                 <td className={td}>{[m.home_district, m.home_state].filter(Boolean).join(", ") || "—"}</td>
+                <td className={td}>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(m.roles ?? ["Member"]).map((r) => (
+                      <Pill key={r} tone={roleTone(r)}>{r}</Pill>
+                    ))}
+                  </div>
+                </td>
                 <td className={td}>{(m.interests ?? []).join(", ") || "—"}</td>
               </tr>
             ))}
             {filteredMembers.length === 0 && (
-              <tr><td className={td} colSpan={6}>No members found.</td></tr>
+              <tr><td className={td} colSpan={7}>No members found.</td></tr>
             )}
           </tbody>
         </TableShell>
@@ -275,7 +311,11 @@ export default function AdminDashboard({ members, applications, events, attendee
                 </td>
                 <td className={td}>
                   <Pill tone={roleTone(a.assigned_role)}>{a.assigned_role ?? "Member"}</Pill>
-                  {a.track && <span className="block mt-1 text-cream/40 text-xs capitalize">track: {a.track}</span>}
+                  {a.track && (
+                    <span className="block mt-1.5">
+                      <Pill tone={trackTone(a.track)}>{trackLabel(a.track)}</Pill>
+                    </span>
+                  )}
                 </td>
                 <td className={td}>{(a.track_roles ?? []).join(", ") || "—"}</td>
                 <td className={`${td} max-w-[260px]`}><span className="line-clamp-3">{a.prior_experience || "—"}</span></td>
@@ -312,7 +352,8 @@ export default function AdminDashboard({ members, applications, events, attendee
             </label>
             <ExportButton onClick={() => downloadCsv(`jubaan-rsvps-${selectedEvent?.title ?? "event"}.csv`, eventAttendees.map((a) => ({
               Event: selectedEvent?.title, Name: a.name, Roll: a.roll_number, Phone: a.phone,
-              Role: a.assigned_role, Track: a.track, RSVPd: formatDate(a.rsvpd_at),
+              Role: a.assigned_role, AllRoles: (a.roles ?? []).join("; "), Track: a.track,
+              Photo: a.photo_url, RSVPd: formatDate(a.rsvpd_at),
             })))} />
           </>
         }
@@ -326,17 +367,27 @@ export default function AdminDashboard({ members, applications, events, attendee
         )}
         <TableShell>
           <thead><tr>
-            <th className={th}>Name</th><th className={th}>Roll</th><th className={th}>Phone</th>
+            <th className={th}>Member</th><th className={th}>Roll</th><th className={th}>Phone</th>
             <th className={th}>Club role</th><th className={th}>RSVPd</th>
           </tr></thead>
           <tbody>
             {eventAttendees.map((a, i) => (
               <tr key={`${a.event_id}-${a.roll_number}-${i}`}>
-                <td className={td}><span className="text-cream font-medium">{a.name}</span></td>
+                <td className={td}>
+                  <div className="flex items-center gap-3">
+                    <ProfileAvatar src={a.photo_url} name={a.name} size={36} />
+                    <span className="text-cream font-medium">{a.name}</span>
+                  </div>
+                </td>
                 <td className={td}>{a.roll_number ?? "—"}</td>
                 <td className={td}>{a.phone ?? "—"}</td>
                 <td className={td}>
                   <Pill tone={roleTone(a.assigned_role)}>{a.assigned_role ?? "Member"}</Pill>
+                  {(a.roles ?? []).length > 1 && (
+                    <span className="block mt-1 text-cream/40 text-xs">
+                      also: {(a.roles ?? []).filter((r) => r !== a.assigned_role).join(", ")}
+                    </span>
+                  )}
                 </td>
                 <td className={td}>{formatDate(a.rsvpd_at)}</td>
               </tr>

@@ -15,6 +15,8 @@ export type Profile = {
   home_district: string | null;
   interests: string[] | null;
   onboarding_completed: boolean;
+  /** Public URL of the member's profile photo (storage bucket `profile-photos`). */
+  photo_url: string | null;
 };
 
 export type OnboardingPayload = {
