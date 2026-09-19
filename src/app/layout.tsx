@@ -20,7 +20,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://jubaan-portal.vercel.app"),
+  metadataBase: new URL("https://jubaan.vercel.app"),
   title: "JUBAAN — The Cultural Club of NIT Jalandhar | Bodhi Circuit",
   description:
     "JUBAAN (Jharkhand Uttar Pradesh Bihar Association And Networks) — a cultural portal celebrating heritage, anchored on the sacred Bodhi Circuit of Lord Buddha. हमारी विरासत, हमारी जुबानी",
