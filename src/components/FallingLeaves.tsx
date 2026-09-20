@@ -253,8 +253,9 @@ function BodhiLeafArt() {
  *
  * The leaf can also be grabbed with the pointer: while held it follows the
  * finger (paused from its scroll path) and grows slightly with a deeper
- * shadow; on release it flings with the measured velocity and a
- * near-critically-damped spring eases it back onto its scroll path.
+ * shadow; on release it stays exactly where it was dropped — the fling
+ * momentum eases out with friction, and the gentle sway, bob and soft
+ * rotation simply continue from that spot. Grabbing it again moves it anew.
  *
  * The scroll ride is a pure function of scroll position (with cinematic lag),
  * so the motion is reversible and calm. Never mounts under
@@ -299,7 +300,7 @@ export default function FallingLeaves() {
     const clamp = (v: number, lo: number, hi: number) =>
       Math.min(hi, Math.max(lo, v));
 
-    type Mode = "ride" | "drag" | "settle";
+    type Mode = "ride" | "drag" | "placed";
     let mode: Mode = "ride";
     let raf = 0;
     let last = performance.now();
@@ -379,7 +380,7 @@ export default function FallingLeaves() {
       vx = clamp(tv.vx * freshness, -3600, 3600);
       vy = clamp(tv.vy * freshness, -3600, 3600);
       trail = [];
-      mode = "settle";
+      mode = "placed";
     };
 
     const tick = () => {
@@ -426,24 +427,26 @@ export default function FallingLeaves() {
         const lean = clamp(tv.vx * 0.03, -22, 22);
         rot += (hr + lean - rot) * (1 - Math.exp(-8 * dt));
       } else {
-        // settle: fling with momentum, then a near-critically-damped spring home
-        const K = 22;
-        const D = 8.8;
-        vx += ((homeX - x) * K - vx * D) * dt;
-        vy += ((hy - y) * K - vy * D) * dt;
-        x += vx * dt;
-        y += vy * dt;
-        const lean = clamp(vx * 0.03, -22, 22);
-        rot += (hr + lean - rot) * (1 - Math.exp(-8 * dt));
-        if (Math.hypot(homeX - x, hy - y) < 2 && Math.hypot(vx, vy) < 25) {
-          mode = "ride";
+        // placed: the leaf stays where it was dropped. The fling momentum
+        // eases out with friction (clamped so it can't leave the viewport),
+        // then it simply floats in place — sway, bob and soft rotation
+        // continuing from the drop point instead of the scroll path.
+        const fr = Math.exp(-2.8 * dt);
+        vx *= fr;
+        vy *= fr;
+        x = clamp(x + vx * dt, -LEAF_W * 0.35, vw - LEAF_W * 0.65);
+        y = clamp(y + vy * dt, -60, vh - 90);
+        if (Math.hypot(vx, vy) < 8) {
           vx = 0;
           vy = 0;
         }
+        const swayRot = Math.sin(now / 3400) * 8;
+        rot += (swayRot - rot) * (1 - Math.exp(-3 * dt));
       }
 
-      const bob = mode === "ride" ? Math.sin(now / 1100) * 6 : 0;
-      wrap.style.transform = `translate3d(${x.toFixed(1)}px, ${(y + bob).toFixed(1)}px, 0) rotate(${rot.toFixed(2)}deg)`;
+      const bob = Math.sin(now / 1100) * 6;
+      const swayX = mode === "placed" ? Math.sin(now / 2600) * 10 : 0;
+      wrap.style.transform = `translate3d(${(x + swayX).toFixed(1)}px, ${(y + bob).toFixed(1)}px, 0) rotate(${rot.toFixed(2)}deg)`;
       wrap.style.opacity = hop.toFixed(3);
 
       const nextShadow = heldRef.current
